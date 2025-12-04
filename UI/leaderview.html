@@ -143,6 +143,10 @@
     .status-btn:not(.active) { opacity: 0.6; }
 
     /* Metrics sidebar layout helpers */
+    #insights-sidebar {
+      position: relative;
+      overflow: visible;
+    }
     #sidebar-handle{
       display:none;
       position:sticky;
@@ -170,6 +174,32 @@
       padding-right:2.5rem;
     }
     #layout-shell.sidebar-collapsed #sidebar-handle{display:flex;}
+    .sidebar-header{
+      margin:-1rem -1rem 0.5rem;
+      padding:8px 14px;
+      min-height:44px;
+      background:linear-gradient(120deg,var(--brand-primary-600),var(--brand-primary-500));
+      border:1px solid var(--brand-primary-700);
+      border-bottom:0;
+      border-radius:12px 12px 0 0;
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      gap:8px;
+    }
+    .sidebar-header button{
+      color:#fff;
+      font-weight:600;
+      font-size:0.95rem;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:transparent;
+      border:none;
+      cursor:pointer;
+      padding:6px 8px;
+    }
+    .sidebar-header button:hover{opacity:0.9;}
 
     /* Style for deferred items in wrap up */
     .action-item.deferred { opacity: 0.6; text-decoration: line-through; }
@@ -863,7 +893,15 @@
       </section>
           <button class="w-full text-white font-semibold py-3 px-4 rounded-lg text-lg mt-6" style="background:linear-gradient(135deg,var(--step4-start),var(--step4-end))">Send Recap & End Meeting</button>
         </div>
-        <aside id="insights-sidebar" class="w-full lg:w-[28%] space-y-4 bg-white border border-slate-200 rounded-xl shadow-sm p-4 lg:sticky lg:top-6 h-fit" aria-hidden="true">
+        <aside id="insights-sidebar" class="w-full lg:w-[28%] space-y-4 bg-white border border-slate-200 rounded-xl shadow-sm p-4 lg:sticky lg:top-0 h-fit" aria-hidden="true">
+          <div class="sidebar-header">
+            <button id="sidebar-collapse" type="button" aria-expanded="false" aria-controls="insights-sidebar" aria-label="Collapse profile panel" onclick="toggleInsightsSidebar()">
+              <span data-role="collapse-label">Hide Profile</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 transition-transform" data-role="collapse-icon">
+                <path d="M4.5 10a.75.75 0 0 1 .75-.75h7.19l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 0 1-1.06-1.06l2.22-2.22H5.25A.75.75 0 0 1 4.5 10Z" />
+              </svg>
+            </button>
+          </div>
           <div class="flex items-start justify-between gap-4">
             <div>
               <h3 class="text-lg font-semibold text-slate-800">Alex Johnson</h3>
@@ -880,12 +918,6 @@
                 </span>
               </div>
             </div>
-            <button id="sidebar-collapse" type="button" class="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-primary)] hover:opacity-80 transition-colors" aria-expanded="false" aria-controls="insights-sidebar" aria-label="Collapse profile panel" onclick="toggleInsightsSidebar()">
-              <span data-role="collapse-label">Hide Profile</span>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 transition-transform" data-role="collapse-icon">
-                <path d="M4.5 10a.75.75 0 0 1 .75-.75h7.19l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 0 1-1.06-1.06l2.22-2.22H5.25A.75.75 0 0 1 4.5 10Z" />
-              </svg>
-            </button>
           </div>
           <div class="mt-4 border border-slate-200 rounded-lg p-4 bg-white">
             <div class="flex items-center justify-between mb-3">
@@ -1509,6 +1541,7 @@
             if (handleIcon) handleIcon.classList.toggle('rotate-180', collapsed);
             if (handleLabel) handleLabel.textContent = collapsed ? 'Profile' : 'Hide';
         }
+
     }
 
     // --- Initialisation ---

@@ -23,7 +23,7 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding-top: 96px;
+      padding-top: 140px;
     }
     .top-banner {
       position: fixed;
@@ -31,8 +31,9 @@
       left: 0;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 20px;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
       width: 100%;
       padding: 16px 20px;
       background: linear-gradient(120deg, rgba(15, 23, 42, 0.8), rgba(8, 13, 26, 0.75));
@@ -43,7 +44,9 @@
     .banner-copy {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
+      align-items: center;
+      text-align: center;
     }
     h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
     .subtitle { color: var(--muted); font-size: 0.9rem; }
@@ -53,7 +56,6 @@
       gap: 8px;
       color: var(--muted);
       font-size: 0.85rem;
-      position: relative;
     }
     .info-icon {
       width: 28px;
@@ -67,26 +69,6 @@
       background: rgba(255,255,255,0.04);
       cursor: default;
     }
-    .tooltip {
-      position: absolute;
-      bottom: -10px;
-      left: 0;
-      transform: translateY(100%);
-      width: max-content;
-      max-width: 320px;
-      padding: 10px 12px;
-      background: rgba(8, 13, 26, 0.9);
-      border: 1px solid var(--stroke);
-      border-radius: 10px;
-      color: var(--text);
-      font-size: 0.85rem;
-      line-height: 1.4;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease;
-    }
-    .demo-note:hover .tooltip { opacity: 1; }
     .tabs {
       display: inline-flex;
       background: var(--tab);
@@ -111,7 +93,7 @@
     }
     .viewframe {
       width: 100%;
-      height: calc(100vh - 96px);
+      height: calc(100vh - 140px);
       position: relative;
       overflow: hidden;
     }
@@ -126,8 +108,8 @@
     iframe.active { display: block; }
     a { color: #93c5fd; }
     @media (max-width: 720px) {
-      body { padding-top: 158px; }
-      .viewframe { height: calc(100vh - 158px); }
+      body { padding-top: 190px; }
+      .viewframe { height: calc(100vh - 190px); }
       .top-banner {
         flex-direction: column;
         align-items: flex-start;
@@ -142,9 +124,8 @@
 <body>
   <div class="top-banner" role="banner">
     <div class="banner-copy">
-      <div class="eyebrow"><span aria-hidden="true"></span>Live Demo</div>
       <h1>AI-enabled 1:1 Agenda</h1>
-      <div class="subtitle">Quickly flip between the Direct Report and Leader journeys without leaving the scene.</div>
+      <div class="subtitle">Switch between the Direct Report and Leader experience.</div>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab active" data-target="dr-frame" role="tab" aria-controls="dr-frame" aria-selected="true">Direct Report View</button>
@@ -156,10 +137,6 @@
     <iframe id="dr-frame" class="active" title="Direct Report View" src="UI/followerview.html"></iframe>
     <iframe id="leader-frame" title="Leader View" src="UI/leaderview.html"></iframe>
   </div>
-
-  <footer>
-    <p>This is a static demo. Publish by dropping this folder on GitHub (or GitHub Pages) and share the link; no backend needed.</p>
-  </footer>
 
   <script>
     const tabs = document.querySelectorAll('.tab');
