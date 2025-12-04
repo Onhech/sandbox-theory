@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monark 1:1 Agenda - Refactored</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== Brand Base ===== */
+    :root{
+      --brand-primary:#395965; /* Monark primary */
+      --brand-primary-700:#2f4a54; /* darker tint */
+      --brand-primary-600:#355360; /* dark */
+      --brand-primary-500:#3b5d6a; /* mid */
+      --brand-primary-400:#4b6f7b; /* light */
+      --brand-primary-300:#5f8491; /* lighter */
+      --brand-primary-200:#7a9ca7; /* lightest */
+      --brand-primary-100:#a8c0c7; /* very light */
+      --brand-accent:#FCBD1F;    /* Monark accent */
+
+      /* Step-specific gradient blues using brand primary (1 darkest -> 4 lightest) */
+      --step1-start:#172554; /* blue-950 */
+      --step1-end:#1e3a8a;   /* blue-900 */
+      --step1-border:#1e3a8a;
+
+      --step2-start:#1e3a8a; /* blue-900 */
+      --step2-end:#1d4ed8;   /* blue-700 */
+      --step2-border:#1d4ed8;
+
+      --step3-start:#1d4ed8; /* blue-700 */
+      --step3-end:#2563eb;   /* blue-600 */
+      --step3-border:#2563eb;
+
+      --step4-start:#2563eb; /* blue-600 */
+      --step4-end:#1e40af;   /* blue-800 */
+      --step4-border:#1e40af;
+
+      /* AI distinct (use accent + soft violet tint to differentiate clearly) */
+      --ai-start:#7c3aed; /* violet-600 */
+      --ai-end:#a78bfa;   /* violet-300 */
+      --ai-border:#8b5cf6;/* violet-500 */
+      --ai-bg:rgba(139,92,246,0.06);
+      --ai-bg2:rgba(139,92,246,0.12);
+      --ai-text: #5b21b6; /* violet-700 */
+
+      /* Surface & text */
+      --surface:#ffffff;
+      --surface-subtle:#f7fafc; /* light slate-50-ish */
+      --card:#ffffff;
+      --card-border:#e5e7eb; /* slate-200 */
+      --text:#0f172a;       /* slate-900 */
+      --text-muted:#475569;  /* slate-600 */
+    }
+
+    body{font-family:'Inter',sans-serif;background:var(--surface-subtle);color:var(--text)}
+    .brand-title{color:var(--brand-primary)}
+    .step-card{background:var(--card); border:1px solid var(--card-border)}
+    /* Coach Nudge - Keep original green */
+    .coach-nudge{background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.25); color:#065f46; border-radius:.75rem; padding:.75rem; margin:.75rem 0; position: relative;}
+    .coach-nudge-title{display:flex;align-items:center;font-weight:600;color:#065f46}
+
+    /* AI Nudge - Apply purple theme */
+    .ai-nudge { background:linear-gradient(135deg, var(--ai-bg2), var(--ai-bg)); border:1px solid rgba(139,92,246,.25); color: var(--ai-text); border-radius:.75rem; padding:.75rem; margin:.75rem 0; position: relative; border-left-width: 4px; border-left-color: var(--ai-border);}
+    .ai-nudge-title {display:flex;align-items:center;font-weight:600;color:var(--ai-text)}
+    /* Style for dismiss button on nudges */
+    .nudge-dismiss-button { position: absolute; top: 0.5rem; right: 0.5rem; background: transparent; border: none; cursor: pointer; color: inherit; opacity: 0.6; }
+    .nudge-dismiss-button:hover { opacity: 1; }
+
+    .mandatory-prompt{background:rgba(95,132,145,.1); border:1px solid rgba(95,132,145,.3); color:var(--brand-primary-700); border-radius:.75rem; padding:1rem; margin:.75rem 0}
+    .mandatory-prompt-title{display:flex;align-items:center;font-weight:600;color:var(--brand-primary-700); font-size: 1.125rem; /* text-lg */}
+    .tooltip{position:absolute;background:#111827;color:#fff;padding:8px 12px;border-radius:8px;z-index:10;width:260px;font-size:.875rem;line-height:1.25rem;visibility:hidden;opacity:0;transition:opacity .2s;bottom:100%; margin-bottom: 8px; left:50%;transform:translateX(-50%); box-shadow:0 8px 24px rgba(0,0,0,.15)}
+    .tooltip-container:hover .tooltip{visibility:visible;opacity:1}
+    .chevron-rotated{transform:rotate(180deg)}
+
+    /* === Agenda Card (Topic) === */
+    .agenda-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-left-width: 6px;
+      border-left-color: var(--brand-primary-300); /* Default color */
+    }
+    .agenda-card-content{display:none;padding:1rem; border-top: 1px solid var(--card-border);}
+    .agenda-card.is-open .agenda-card-content{display:block}
+    .agenda-card.is-open .chevron-icon{transform:rotate(180deg)}
+    /* Topic Status Borders */
+    .topic-discussed{border-left-color:#10b981 !important;}
+    .topic-deferred{border-left-color:#94a3b8 !important;} /* This remains for topics */
+    /* Step colors */
+    .step-1 .agenda-card:not(.topic-discussed):not(.topic-deferred){border-left-color:var(--step1-border)}
+    .step-2 .agenda-card:not(.topic-discussed):not(.topic-deferred){border-left-color:var(--step2-border)}
+    .step-3 .agenda-card:not(.topic-discussed):not(.topic-deferred){border-left-color:var(--step3-border)}
+    .step-4 .agenda-card:not(.topic-discussed):not(.topic-deferred){border-left-color:var(--step4-border)}
+    .creation-date { display: none; }
+    .agenda-card.is-open .creation-date { display: inline; }
+    .topic-check-icon{display:none;color:#047857;align-items:center;}
+    .topic-discussed .topic-check-icon{display:inline-flex;}
+
+
+    /* === Action Card (Task) === */
+    .action-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      padding: 0.75rem;
+      padding-right: 2.5rem; /* Ensure space for dismiss */
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      position: relative;
+    }
+    /* Action Status Styling */
+    .action-card.status-done { background-color: #ecfdf5; border-color: #a7f3d0; }
+    .action-card.status-todo { background-color: #fffbeb; border-color: #fde68a; }
+    .action-card.status-defer { background-color: #f8fafc; border-color: #e2e8f0; }
+    .nested-action-items .action-card:not(.status-done):not(.status-todo):not(.status-defer) {
+        background-color: #f8fafc;
+    }
+    .action-dismiss-button { position: absolute; top: 50%; right: 0.75rem; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; color: #94a3b8; }
+    .action-dismiss-button:hover { color: #475569; }
+
+
+    /* Section badge gradients */
+    .badge-1{background:linear-gradient(135deg,var(--step1-start),var(--step1-end)); box-shadow:0 6px 18px rgba(57,89,101,.25)}
+    .badge-2{background:linear-gradient(135deg,var(--step2-start),var(--step2-end)); box-shadow:0 6px 18px rgba(57,89,101,.22)}
+    .badge-3{background:linear-gradient(135deg,var(--step3-start),var(--step3-end)); box-shadow:0 6px 18px rgba(57,89,101,.18)}
+    .badge-4{background:linear-gradient(135deg,var(--step4-start),var(--step4-end)); box-shadow:0 6px 18px rgba(57,89,101,.12)}
+
+    /* AI suggestion card */
+    .ai-suggestion-card{border-left:4px solid var(--ai-border) !important; background:linear-gradient(135deg,var(--ai-bg2),var(--ai-bg))}
+    .ai-badge{background:linear-gradient(135deg,var(--ai-start),var(--ai-end));color:#fff;border-radius:9999px;padding: 1px 6px; font-size:.65rem;font-weight:600;margin-left:.5rem; display: inline-flex; align-items: center;}
+
+    /* Phase label highlight + accent */
+    .phase-label{color:#64748b}
+    .phase-active{color:var(--brand-primary);font-weight:600}
+
+    /* Accent pill */
+    .accent-pill{background:rgba(252,189,31,.12); color:#8a6b06; border:1px solid rgba(252,189,31,.35)}
+
+    /* Utility for status buttons to show active state */
+    .status-btn.active { opacity: 1 !important; font-weight: 600; }
+    .status-btn:not(.active) { opacity: 0.6; }
+
+    /* Metrics sidebar layout helpers */
+    #sidebar-handle{
+      display:none;
+      position:sticky;
+      top:5.5rem;
+      align-self:flex-start;
+      margin-left:auto;
+      margin-right:-1.75rem;
+      width:2.5rem;
+      min-height:clamp(260px, 60vh, 460px);
+      padding:1.1rem 0.55rem;
+      z-index:20;
+      justify-content:center;
+      align-items:center;
+      gap:1rem;
+      box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    }
+    #sidebar-handle span{
+      writing-mode:vertical-rl;
+      text-orientation:mixed;
+      letter-spacing:0.08em;
+    }
+    #layout-shell.sidebar-collapsed #insights-sidebar{display:none;}
+    #layout-shell.sidebar-collapsed #primary-content{
+      width:100% !important;
+      padding-right:2.5rem;
+    }
+    #layout-shell.sidebar-collapsed #sidebar-handle{display:flex;}
+
+    /* Style for deferred items in wrap up */
+    .action-item.deferred { opacity: 0.6; text-decoration: line-through; }
+
+    /* Custom Confirmation Modal */
+    #confirmation-modal {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      z-index: 50;
+      width: 90%;
+      max-width: 400px;
+      border: 1px solid var(--card-border);
+    }
+    #modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 40;
+    }
+
+    /* EDIT 2: Reverted font size for suggested questions */
+    .suggested-question-list li {
+        font-size: 0.875rem; /* text-sm */
+        margin-bottom: 0.5rem; /* space-y-2 equivalent */
+    }
+    /* EDIT 3: Removed ai-style class styling as it's now applied to the header */
+    .suggested-question-intro {
+        font-size: 0.875rem; /* text-sm */
+        font-weight: 400;
+        margin-bottom: 1rem;
+        padding-right: 1.5rem; /* Avoid overlapping list marker */
+        color: var(--ai-text); /* Inherit color */
+    }
+
+
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold brand-title">Monark 1:1 Agenda</h1>
+        <p class="text-slate-500">Follow these steps to perfect your 1:1</p>
+      </div>
+       <div class="mt-2 w-full md:w-[28rem]">
+        <div class="flex justify-between text-sm text-slate-600 mb-1">
+          <span>Elapsed Time</span>
+          <span id="timer-display">00:00 / 45:00 Total</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2.5 relative overflow-hidden border border-slate-200">
+          <div id="progress-bar" class="h-2.5 rounded-full" style="background: linear-gradient(90deg, var(--step1-start) 0%, var(--step1-start) 11.11%, var(--step2-start) 11.11%, var(--step2-start) 66.66%, var(--step3-start) 66.66%, var(--step3-start) 88.88%, var(--step4-start) 88.88%, var(--step4-start) 100%); width: 0%;"></div>
+          <div class="absolute inset-0 z-10">
+            <span class="absolute top-0 h-full w-0.5 bg-white" style="left:11.11%"></span> <!-- 5/45 -->
+            <span class="absolute top-0 h-full w-0.5 bg-white" style="left:66.66%"></span> <!-- 30/45 -->
+            <span class="absolute top-0 h-full w-0.5 bg-white" style="left:88.88%"></span> <!-- 40/45 -->
+          </div>
+        </div>
+        <div class="text-xs flex justify-between mt-1">
+          <span id="label-open" class="phase-label" style="width:11.11%">Check-in</span>
+          <span id="label-tactics" class="phase-label" style="width:55.55%;text-align:center">Priorities</span>
+          <span id="label-strategy" class="phase-label" style="width:22.22%;text-align:center">Growth</span>
+          <span id="label-wrap" class="phase-label" style="flex:1;text-align:right">Wrap-up</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="mt-6">
+      <p class="text-lg font-semibold text-slate-700 mb-6">Four Steps to Your 1:1 Meeting</p>
+      <div id="layout-shell" class="relative flex flex-col lg:flex-row gap-6 sidebar-collapsed">
+        <div id="primary-content" class="lg:w-[70%] space-y-4">
+
+      <!-- === Step 1: Open === -->
+      <section id="step1-container" class="step-1 step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step1')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-1">1</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Check-in & Connect</h2>
+               <!-- Removed tooltip container -->
+            </div>
+          </div>
+          <svg id="step1-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+        <div id="step1-content" class="p-4 md:p-6 border-t border-slate-200">
+            <div class="flex flex-col md:flex-row gap-6">
+                 <!-- Left Column: Prompts -->
+               <div class="w-full md:w-1/2">
+                  <!-- EDIT 3: Moved descriptive text here -->
+                  <h3 class="text-xl font-semibold text-[var(--brand-primary-600)] mb-2">Start With a Question</h3>
+                  <p class="text-sm text-slate-600 mb-4">Open the meeting with a personal check-in question.</p>
+                  <!-- EDIT 3: Wrap intro text in ai-nudge -->
+                  <div class="ai-nudge !mt-0 !mb-3">
+                      <h4 class="ai-nudge-title">
+                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                           Try one of these questions
+                      </h4>
+                  <!-- EDIT 3: Removed ai-style from UL -->
+                  <ul class="list-disc list-outside text-sm mt-2 space-y-2 font-medium suggested-question-list pl-5 marker:text-[var(--ai-border)]">
+                    <li>“What’s been most energizing or challenging since our last check-in?”</li>
+                    <li>“What is something you are excited about righ now, outside of work?</li>
+                    <li>"Think about the best manager you've ever had, what did you like about them?"</li>
+                  </ul>
+               </div>
+               </div>
+               <!-- Right Column: Wellbeing -->
+               <div class="w-full md:w-1/2">
+                 <div class="bg-white rounded-lg p-4 border border-slate-200 h-full">
+                   <div class="flex items-center justify-between mb-2">
+                     <h4 class="font-semibold text-slate-800">Alex's Wellbeing This Week</h4>
+                     <span class="px-2 py-1 rounded-full text-xs font-medium accent-pill">Pulse</span>
+                   </div>
+                   <div class="space-y-3 mt-4">
+                      <div>
+                       <div class="flex justify-between text-sm mb-1 text-slate-600">
+                         <div class="flex items-center space-x-1.5">
+                           <span>Task Support</span>
+                           <div class="tooltip-container relative">
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer"> <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd" /> </svg>
+                             <div class="tooltip"><strong>Task Support:</strong> "Do you have the resources and support you need to do your job effectively?"</div>
+                           </div>
+                         </div>
+                         <span>Well-supported</span>
+                       </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="h-2.5 rounded-full bg-green-600" style="width:80%"></div></div>
+                     </div>
+                     <div>
+                       <div class="flex justify-between text-sm mb-1 text-slate-600">
+                         <div class="flex items-center space-x-1.5">
+                           <span>Development</span>
+                           <div class="tooltip-container relative">
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer"> <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd" /> </svg>
+                             <div class="tooltip"><strong>Development:</strong> "Are you getting the opportunities you need to learn and grow?"</div>
+                           </div>
+                         </div>
+                         <span>Feeling okay</span>
+                       </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="h-2.5 rounded-full bg-amber-500" style="width:60%"></div></div>
+                     </div>
+                     <div>
+                       <div class="flex justify-between text-sm mb-1 text-slate-600">
+                         <div class="flex items-center space-x-1.5">
+                           <span>Wellbeing</span>
+                           <div class="tooltip-container relative">
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer"> <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd" /> </svg>
+                             <div class="tooltip"><strong>Wellbeing:</strong> "Overall, how has your wellbeing been this past week?"</div>
+                           </div>
+                         </div>
+                         <span>Struggling</span>
+                       </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="h-2.5 rounded-full bg-red-600" style="width:40%"></div></div>
+                     </div>
+                     <div>
+                       <div class="flex justify-between text-sm mb-1 text-slate-600">
+                         <div class="flex items-center space-x-1.5">
+                           <span>Purpose</span>
+                           <div class="tooltip-container relative">
+                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-slate-400 hover:text-slate-600 cursor-pointer"> <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd" /> </svg>
+                             <div class="tooltip"><strong>Purpose:</strong> "Do you feel connected to our team's mission and see the impact of your work?"</div>
+                           </div>
+                         </div>
+                          <span>Feeling aligned</span>
+                       </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5"><div class="h-2.5 rounded-full bg-green-600" style="width:80%"></div></div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+            </div>
+             <!-- AI Nudges moved below columns, now in a flex container -->
+             <div class="mt-6 md:flex md:gap-6">
+                 <div id="ai-nudge-1" class="ai-nudge md:w-1/2"> <!-- Added width -->
+                     <button class="nudge-dismiss-button" onclick="dismissCard('ai-nudge-1')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                     </button>
+                     <h4 class="ai-nudge-title">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                       Address Low Wellbeing Score
+                     </h4>
+                     <p class="text-sm mt-2">Alex's "Wellbeing" score is low. Try to understand what's driving this by asking: <em>"I noticed your wellbeing score was low this week, what's contributing to that?"</em></p>
+                 </div>
+                 <div id="ai-nudge-2" class="ai-nudge md:w-1/2"> <!-- Added width -->
+                      <button class="nudge-dismiss-button" onclick="dismissCard('ai-nudge-2')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                      </button>
+                     <h4 class="ai-nudge-title">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                       Build Rapport (Personal Follow-up)
+                     </h4>
+                     <p class="text-sm mt-2">Alex mentioned their dog was sick last week. Remember to ask how their dog is doing.</p>
+                 </div>
+            </div>
+        </div>
+      </section>
+
+      <!-- === Step 2: Tactics === -->
+      <section id="step2-container" class="step-2 step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step2')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-2">2</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Progress & Priorities</h2>
+               <!-- Removed tooltip container -->
+            </div>
+          </div>
+          <svg id="step2-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+        <div id="step2-content" class="p-4 md:p-6 border-t border-slate-200 hidden space-y-6"> <!-- Initially hidden -->
+          <!-- === Follow-ups (Now Action Items) === -->
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Action Items from Previous Meetings</h3>
+            <div class="space-y-2" id="followupsList">
+              <!-- Action Card 1 -->
+              <div id="action-item-1" class="action-card status-todo" data-status="todo" data-owner="Alex">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                   <!-- EDIT 1: Moved assignee pill -->
+                   <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                  <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                     <p class="text-sm font-semibold text-slate-900">Finalize Q3 proposal deck</p>
+                     <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                  </div>
+                  <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button onclick="selectActionStatus('action-item-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                    <button onclick="selectActionStatus('action-item-1','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                    <button onclick="handleActionDeferToggle('action-item-1', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('action-item-1')">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+               <!-- Action Card 2 (Example) -->
+              <div id="action-item-followup-2" class="action-card status-done" data-status="done" data-owner="You">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <!-- EDIT 1: Moved assignee pill -->
+                    <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: You</button>
+                   <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                     <p class="text-sm font-semibold text-slate-900">Send Alex onboarding doc feedback</p>
+                      <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                   </div>
+                  <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button onclick="selectActionStatus('action-item-followup-2','done', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                    <button onclick="selectActionStatus('action-item-followup-2','todo', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                    <button onclick="handleActionDeferToggle('action-item-followup-2', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('action-item-followup-2')">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            <button type="button" onclick="showAddPlaceholder('action item')" class="mt-3 ml-2 inline-flex items-center text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+          </div>
+
+          <!-- === Agenda Items (Topics) === -->
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Agenda Topics</h3>
+            <div class="space-y-3" id="drItemsList">
+               <!-- Agenda Card 1 -->
+              <div id="agenda-item-1" class="agenda-card rounded-lg shadow-sm">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('agenda-item-1')" class="flex-1 cursor-pointer pr-4 group"> <!-- Added group -->
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-lg font-semibold text-slate-900">Launch plan for Project Nova</h4>
+                      <span class="topic-check-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg>
+                      </span>
+                    </div>
+                    <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 29, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="markAsDiscussed('agenda-item-1', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                    <button onclick="handleDeferToggle('agenda-item-1', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <svg onclick="toggleAgendaItem('agenda-item-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="text-sm font-medium text-slate-700">Shared Notes</label>
+                      <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 space-y-2 text-sm">
+                      <p>"Feeling blocked on the marketing assets. The current designs don't match the brief we agreed on."</p>
+                      <ul class="list-disc list-inside space-y-1">
+                        <li>Need help escalating this with the creative team.</li>
+                        <li>Can we review the brief together to make sure I'm not missing anything?</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- NESTED Action Items -->
+                  <div class="mt-4">
+                      <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                      <div class="space-y-2 nested-action-items">
+                           <div id="nested-action-1-1" class="action-card status-todo" data-status="todo" data-owner="Alex">
+                              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                                <!-- EDIT 1: Moved assignee pill -->
+                                <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                                <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                                   <p class="text-sm font-semibold text-slate-900">Draft marketing asset brief</p>
+                                    <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                                </div>
+                                <div class="flex items-center space-x-2 flex-shrink-0">
+                                  <button onclick="selectActionStatus('nested-action-1-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                                  <button onclick="selectActionStatus('nested-action-1-1','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                                  <button onclick="handleActionDeferToggle('nested-action-1-1', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('nested-action-1-1')">
+                                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                                    </button>
+                                </div>
+                              </div>
+                          </div>
+                      </div>
+                      <button onclick="addNestedActionItem(this, 'agenda-item-1')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                  </div>
+
+                  <div id="ai-nudge-in-topic-1" class="ai-nudge">
+                    <h3 class="ai-nudge-title">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                      AI Nudge: 1:1 Core Process
+                    </h3>
+                    <p class="text-sm mt-2">Alex is blocked. Try a <strong>Clarify</strong> question:</p>
+                    <p class="text-sm italic">“What’s the biggest assumption we’re making about the marketing assets?”</p>
+                     <button class="nudge-dismiss-button" onclick="dismissCard('ai-nudge-in-topic-1')">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+               <!-- Agenda Card 2 -->
+               <div id="agenda-item-2" class="agenda-card rounded-lg shadow-sm">
+                 <div class="flex justify-between items-center p-3">
+                   <div onclick="toggleAgendaItem('agenda-item-2')" class="flex-1 cursor-pointer pr-4 group"> <!-- Added group -->
+                     <div class="flex items-center gap-2">
+                       <h4 class="text-lg font-semibold text-slate-900">Q4 team event planning</h4>
+                       <span class="topic-check-icon" aria-hidden="true">
+                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg>
+                       </span>
+                     </div>
+                      <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 27, 2025</span></p>
+                   </div>
+                   <div class="flex items-center space-x-2">
+                     <button onclick="markAsDiscussed('agenda-item-2', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                    <button onclick="handleDeferToggle('agenda-item-2', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                     <svg onclick="toggleAgendaItem('agenda-item-2')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                   </div>
+                 </div>
+                 <div class="agenda-card-content space-y-4">
+                   <div>
+                     <div class="flex justify-between items-center mb-1">
+                       <label class="text-sm font-medium text-slate-700">Shared Notes</label>
+                       <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button>
+                     </div>
+                     <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 space-y-2 text-sm">
+                       <p>"Need to decide on a budget and activity, any ideas?"</p>
+                       <ul class="list-disc list-inside space-y-1">
+                         <li>Option 1: Bowling ($50/person)</li>
+                         <li>Option 2: Escape Room ($70/person)</li>
+                         <li>Need to book by next week.</li>
+                       </ul>
+                     </div>
+                   </div>
+                   <div class="mt-4">
+                       <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                       <div class="space-y-2 nested-action-items">
+                           <!-- Placeholder for nested actions -->
+                       </div>
+                       <button onclick="addNestedActionItem(this, 'agenda-item-2')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                   </div>
+                 </div>
+               </div>
+
+               <!-- Agenda Card 3 (From AI Suggestion Example) -->
+                <div id="agenda-item-ai-1" class="agenda-card rounded-lg shadow-sm">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('agenda-item-ai-1')" class="flex-1 cursor-pointer pr-4 group"> <!-- Added group -->
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-lg font-semibold text-slate-900">Check in on workload sentiment</h4>
+                      <span class="topic-check-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg>
+                      </span>
+                    </div>
+                     <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 29, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                     <button onclick="markAsDiscussed('agenda-item-ai-1', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                    <button onclick="handleDeferToggle('agenda-item-ai-1', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <svg onclick="toggleAgendaItem('agenda-item-ai-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <div>
+                     <div class="flex justify-between items-center mb-1"> <label class="text-sm font-medium text-slate-700">Shared Notes</label> <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button> </div>
+                     <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 space-y-2 text-sm">
+                         <p>Explore the "stretched" feeling. Ask an open-ended question to understand the root cause and see if it's tied to the Project Nova blockers.</p>
+                     </div>
+                  </div>
+                   <div class="mt-4">
+                       <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                       <div class="space-y-2 nested-action-items"> <!-- Placeholder --> </div>
+                       <button onclick="addNestedActionItem(this, 'agenda-item-ai-1')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                   </div>
+                </div>
+              </div>
+
+               <!-- AI Suggested Topic -->
+               <div id="ai-topic-1" class="agenda-card ai-suggestion-card rounded-lg shadow-sm">
+                 <div class="flex justify-between items-center p-3">
+                  <div class="flex-1 pr-4 cursor-pointer" onclick="toggleAgendaItem('ai-topic-1')">
+                   <div class="flex items-center gap-2">
+                      <span class="ai-badge mr-2">AI</span>
+                      <h4 class="text-lg font-semibold text-slate-900">Discuss Development Score</h4>
+                      <span class="topic-check-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg>
+                      </span>
+                    </div>
+                     <p class="text-slate-600 text-sm mt-1 ml-7 truncate"><span class="text-xs text-slate-400 creation-date">Suggested: Oct 29, 2025</span></p>
+                  </div>
+                   <div class="flex items-center space-x-2">
+                     <button onclick="markAsDiscussed('ai-topic-1', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                    <button onclick="handleDeferToggle('ai-topic-1', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                     <!-- Added dismiss button -->
+                     <button onclick="dismissCard('ai-topic-1'); event.stopPropagation();" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Dismiss suggestion">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"> <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /> </svg>
+                     </button>
+                     <svg class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer" onclick="toggleAgendaItem('ai-topic-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                   </div>
+                 </div>
+                 <div class="agenda-card-content space-y-4">
+                   <div class="text-slate-700 text-sm space-y-2">
+                     <p><strong>Insight:</strong> Alex's Development score was 'Okay'.</p>
+                     <p><strong>Suggestion:</strong> Ask what specific opportunities Alex is looking for or feels are missing.</p>
+                   </div>
+                    <div class="mt-4">
+                       <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                       <div class="space-y-2 nested-action-items"> <!-- Placeholder --> </div>
+                       <button onclick="addNestedActionItem(this, 'ai-topic-1')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                   </div>
+                 </div>
+               </div>
+
+
+            </div>
+            <button type="button" onclick="showAddPlaceholder('topic')" class="mt-3 ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[var(--brand-primary-600)] hover:bg-[var(--brand-primary-700)] px-3 py-1.5 rounded-md shadow-sm transition-colors">+ Add Topic</button>
+          </div>
+
+          <!-- Removed AI Suggested Topics Section -->
+
+          <!-- === Deferred Items === -->
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Deferred Items</h3>
+            <div id="deferredActionList" class="space-y-3">
+              <p id="deferred-action-placeholder" class="text-slate-500 italic">No items deferred yet.</p>
+               <!-- Example Deferred Action Item -->
+                <div id="parked-action-1" class="action-card status-defer" data-status="defer" data-owner="You"> <!-- EDIT 3: Renamed status -->
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                     <!-- EDIT 1: Moved assignee pill -->
+                     <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: You</button>
+                    <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                        <p class="text-sm font-semibold text-slate-900">Revisit Q4 hiring plan</p>
+                         <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                    </div>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <button onclick="selectActionStatus('parked-action-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                        <button onclick="selectActionStatus('parked-action-1','todo', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                        <!-- EDIT 3 & 4: Changed Park to Defer/Undefer -->
+                        <button onclick="handleActionDeferToggle('parked-action-1', this)" data-action="undefer" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Undefer</button>
+                        <button class="action-dismiss-button" onclick="confirmDiscardActionItem('parked-action-1')">
+                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                 <!-- Example Deferred Topic (Remains in Parking Lot) -->
+                 <div id="parked-topic-1" class="agenda-card topic-deferred rounded-lg shadow-sm" data-original-parent="drItemsList"> <!-- Added original parent -->
+                    <div class="flex justify-between items-center p-3">
+                    <div onclick="toggleAgendaItem('parked-topic-1')" class="flex-1 cursor-pointer pr-4 group"> <!-- Added group -->
+                        <h4 class="text-lg font-semibold text-slate-900">Discuss new vendor options</h4>
+                        <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Deferred: Oct 15, 2025</span></p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="markAsDiscussed('parked-topic-1', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                        <button onclick="handleDeferToggle('parked-topic-1', this); event.stopPropagation();" data-action="undefer" class="status-btn active px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Undefer</button>
+                        <svg onclick="toggleAgendaItem('parked-topic-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                    </div>
+                    </div>
+                    <div class="agenda-card-content space-y-4">
+                        <p class="text-sm text-slate-700">Deferred for 2 weeks.</p>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- === Step 3: Strategy === -->
+       <section id="step3-container" class="step-3 step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step3')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-3">3</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Growth & Development</h2>
+               <!-- Removed tooltip container -->
+            </div>
+          </div>
+          <svg id="step3-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+        <div id="step3-content" class="p-4 md:p-6 border-t border-slate-200 hidden space-y-4"> <!-- Initially hidden -->
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+               <h4 class="font-semibold text-slate-800">Alex's Sentiment</h4>
+              <p class="text-xs text-slate-500 mb-2">10-Meeting Trend</p>
+               <div class="h-24 w-full flex items-end border-b border-l border-slate-200 p-1">
+                <div class="h-1/2 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-3/4 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/3 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/3 bg-amber-400 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/5 bg-amber-400 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/2 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/3 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-3/4 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/3 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/2 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+              </div>
+            </div>
+             <div class="bg-white rounded-lg p-4 border border-slate-200">
+               <h4 class="font-semibold text-slate-800">Alex's Wellbeing</h4>
+              <p class="text-xs text-slate-500 mb-2">10-Meeting Trend</p>
+               <div class="h-24 w-full flex items-end border-b border-l border-slate-200 p-1">
+                <div class="h-3/4 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-4/5 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/3 bg-amber-500 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/2 bg-amber-500 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/3 bg-red-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/2 bg-red-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/3 bg-red-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-1/2 bg-amber-500 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-2/3 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+                <div class="h-3/4 bg-green-600 rounded-t-sm" style="width: 10%; flex-shrink: 0;"></div>
+              </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <h4 class="font-semibold text-slate-800 mb-3">Active Development Goals</h4>
+              <ul class="list-disc list-inside text-slate-700 text-sm space-y-1">
+                <li>Improve public speaking skills</li>
+                <li>Get Q3 proposal approved</li>
+              </ul>
+              <button class="mt-2 text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Goal</button>
+            </div>
+             <div class="bg-white rounded-lg p-4 border border-slate-200">
+              <h4 class="font-semibold text-slate-800 mb-3">Previous Meetings Exerpts</h4>
+              <div class="text-slate-700 text-sm space-y-3">
+                <p class="italic">"I'd like to talk about my path to 'Senior Designer'. What are the key skills I'm missing, and can we build a plan to get there in the next 1-2 years?"</p>
+                <p class="italic">"Also, I'm interested in mentoring an intern next summer if possible."</p>
+              </div>
+            </div>
+          </div>
+           <div class="md:flex md:gap-6">
+              <div id="ai-nudge-strat" class="ai-nudge md:w-1/2"> <!-- Added width -->
+                 <h3 class="ai-nudge-title">
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                   AI Highlight: Connect Trends to Goals
+                </h3>
+                <p class="text-sm mt-2">Sentiment dipped and wellbeing is trending down. Consider exploring this constructively:</p>
+                <p class="text-sm italic">“Looking at your goal of getting the Q3 proposal approved, how is your current wellbeing and workload affecting your confidence in that timeline?”</p>
+                 <button class="nudge-dismiss-button" onclick="dismissCard('ai-nudge-strat')">
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                </button>
+              </div>
+              <div class="md:w-1/2"> <!-- Empty div for spacing --> </div>
+           </div>
+        </div>
+      </section>
+
+      <!-- === Step 4: Wrap === -->
+      <section id="step4-container" class="step-4 step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step4')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-4">4</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Wrap-up & Next Steps</h2>
+               <!-- Removed tooltip container -->
+            </div>
+          </div>
+          <svg id="step4-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+        <div id="step4-content" class="p-4 md:p-6 border-t border-slate-200 hidden space-y-6"> <!-- Initially hidden -->
+           <!-- Removed intro P element -->
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div>
+               <h3 class="text-lg font-semibold text-slate-800 mb-3">Alex's Action Items</h3>
+               <div id="alex-action-list" class="space-y-2">
+                 <div id="wrapup-action-1" class="p-3 bg-white rounded-lg border border-slate-200 action-item relative" data-owner="Alex"> <!-- Added relative -->
+                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                     <div class="flex items-center gap-2 flex-1">
+                       <span class="text-slate-800 text-sm font-semibold" data-role="description">Draft marketing asset brief</span>
+                       <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                     </div>
+                     <div class="flex items-center gap-2">
+                       <button type="button" class="text-xs font-medium px-2 py-1 rounded-full accent-pill self-start sm:self-center" onclick="toggleActionOwner(event,this)" data-role="assignee-label">Assignee: Alex</button>
+                       <button type="button" class="text-xs text-slate-500 hover:text-slate-700 font-medium" onclick="deferActionItem(event, this)">Defer</button>
+                        <button type="button" class="text-red-600 hover:text-red-800 font-medium p-1 -m-1" onclick="confirmDiscardActionItem('wrapup-action-1')" aria-label="Discard">
+                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                        </button>
+                     </div>
+                   </div>
+                 </div>
+                 <div id="wrapup-action-2" class="p-3 bg-white rounded-lg border border-slate-200 action-item relative" data-owner="Alex"> <!-- Added relative -->
+                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 flex-1">
+                       <span class="text-slate-800 text-sm font-semibold" data-role="description">Book Q4 team event</span>
+                       <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                     </div>
+                      <div class="flex items-center gap-2">
+                        <button type="button" class="text-xs font-medium px-2 py-1 rounded-full accent-pill self-start sm:self-center" onclick="toggleActionOwner(event,this)" data-role="assignee-label">Assignee: Alex</button>
+                       <button type="button" class="text-xs text-slate-500 hover:text-slate-700 font-medium" onclick="deferActionItem(event, this)">Defer</button>
+                        <button type="button" class="text-red-600 hover:text-red-800 font-medium p-1 -m-1" onclick="confirmDiscardActionItem('wrapup-action-2')" aria-label="Discard">
+                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                        </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               <button type="button" onclick="addActionItem('alex-action-list','Alex')" class="mt-3 inline-flex items-center text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+             </div>
+             <div>
+               <h3 class="text-lg font-semibold text-slate-800 mb-3">My Action Items</h3>
+               <div id="leader-action-list" class="space-y-2">
+                  <div id="wrapup-action-3" class="p-3 bg-white rounded-lg border border-slate-200 action-item relative" data-owner="You"> <!-- Added relative -->
+                   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 flex-1">
+                       <span class="text-slate-800 text-sm font-semibold" data-role="description">Review budget for freelance designer</span>
+                       <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                     </div>
+                      <div class="flex items-center gap-2">
+                        <button type="button" class="text-xs font-medium px-2 py-1 rounded-full accent-pill self-start sm:self-center" onclick="toggleActionOwner(event,this)" data-role="assignee-label">Assignee: You</button>
+                        <button type="button" class="text-xs text-slate-500 hover:text-slate-700 font-medium" onclick="deferActionItem(event, this)">Defer</button>
+                        <button type="button" class="text-red-600 hover:text-red-800 font-medium p-1 -m-1" onclick="confirmDiscardActionItem('wrapup-action-3')" aria-label="Discard">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                        </button>
+                      </div>
+                   </div>
+                 </div>
+               </div>
+               <button type="button" onclick="addActionItem('leader-action-list','You')" class="mt-3 inline-flex items-center text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+             </div>
+           </div>
+          <div>
+            <h3 class="text-xl font-semibold text-[var(--brand-primary-600)] mt-6 mb-2">Close the Meeting</h3>
+            <p class="text-sm text-slate-600 mb-3">Use a closing prompt to reinforce appreciation and lock in commitments.</p>
+            <!-- EDIT 3: Wrap intro text in ai-nudge -->
+             <div class="ai-nudge md:w-1/2 !mt-0 !mb-3"> <!-- EDIT 4: Added width -->
+                 <h4 class="ai-nudge-title">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                      Suggested Closing Phrases
+                 </h4>
+                 <p class="text-sm mt-2">Try one of these phrases to close with intention:</p>
+             
+             <!-- EDIT 3: Removed ai-style from UL -->
+            <ul class="list-disc list-inside text-sm mt-2 space-y-2 font-medium suggested-question-list">
+               <li>Offer specific appreciation or kudos for something they shipped this week.</li>
+               <li>Reaffirm support for their top priority and how you will follow through.</li>
+               <li>Ask if there's anything else they need to feel confident before wrapping.</li>
+             </ul>
+             </div>
+             <div class="md:flex">
+                <div id="ai-nudge-3" class="ai-nudge mt-5 md:w-1/2">
+                  <h3 class="ai-nudge-title">
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 mr-1.5" style="color:var(--ai-text)"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                     AI Nudge: Close the Loop on Wellbeing
+                  </h3>
+                  <p class="text-sm mt-2">Alex has flagged low wellbeing two weeks in a row. Try acknowledging it alongside your appreciation:</p>
+                  <p class="text-sm italic">“Before we end, thank you for carrying Project Nova while feeling stretched. I’ll check in mid-week to be sure you’re supported—is there anything specific you need from me?”</p>
+                    <button class="nudge-dismiss-button" onclick="dismissCard('ai-nudge-3')">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                     </button>
+                </div>
+                <div class="md:w-1/2"></div> <!-- Spacer div -->
+            </div>
+          </div>
+        </div>
+      </section>
+          <button class="w-full text-white font-semibold py-3 px-4 rounded-lg text-lg mt-6" style="background:linear-gradient(135deg,var(--step4-start),var(--step4-end))">Send Recap & End Meeting</button>
+        </div>
+        <aside id="insights-sidebar" class="w-full lg:w-[28%] space-y-4 bg-white border border-slate-200 rounded-xl shadow-sm p-4 lg:sticky lg:top-6 h-fit" aria-hidden="true">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-800">Alex Johnson</h3>
+              <p class="text-xs text-slate-500 mt-1">Product Designer · 18 months on team</p>
+              <p class="text-xs text-slate-400 mt-1">Last met: Oct 22, 2025</p>
+              <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title="Employee Health score from the most recent survey">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.172 5.172a4 4 0 0 1 5.656 0L10 6.343l1.172-1.171a4 4 0 0 1 5.656 5.656L10 17.656l-6.828-6.828a4 4 0 0 1 0-5.656Z"/></svg>
+                  Employee Health: 78%
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200" title="Average sentiment over the past 4 weeks">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3 3.75A.75.75 0 0 1 3.75 3h4.5a.75.75 0 0 1 0 1.5H5.56l3.72 3.72a.75.75 0 0 1 0 1.06l-3.72 3.72h2.69a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 3 13.75v-4.5a.75.75 0 0 1 1.5 0v2.69l3.19-3.19-3.19-3.19v2.69A.75.75 0 0 1 3 9.25v-4.5Z"/><path d="M11.72 4.72a.75.75 0 0 1 1.06 0l2.47 2.47 2.47-2.47a.75.75 0 0 1 1.28.53v8a.75.75 0 0 1-1.5 0V7.81l-1.72 1.72a.75.75 0 0 1-1.06 0L13.28 7.8v5.98a.75.75 0 0 1-1.5 0v-8c0-.3.18-.57.45-.69Z"/></svg>
+                  Sentiment Trend: +0.2
+                </span>
+              </div>
+            </div>
+            <button id="sidebar-collapse" type="button" class="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand-primary)] hover:opacity-80 transition-colors" aria-expanded="false" aria-controls="insights-sidebar" aria-label="Collapse profile panel" onclick="toggleInsightsSidebar()">
+              <span data-role="collapse-label">Hide Profile</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 transition-transform" data-role="collapse-icon">
+                <path d="M4.5 10a.75.75 0 0 1 .75-.75h7.19l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 0 1-1.06-1.06l2.22-2.22H5.25A.75.75 0 0 1 4.5 10Z" />
+              </svg>
+            </button>
+          </div>
+          <div class="mt-4 border border-slate-200 rounded-lg p-4 bg-white">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm font-semibold text-slate-800">Today's Pulse</p>
+              <span class="text-xs text-slate-500">Submitted 2h ago</span>
+            </div>
+            <div class="space-y-4">
+              <div class="relative mx-auto w-40 h-40">
+                <svg viewBox="0 0 200 200" class="w-full h-full">
+                  <defs>
+                    <radialGradient id="profilePulse" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="rgba(59,130,246,0.3)" />
+                      <stop offset="100%" stop-color="rgba(59,130,246,0.05)" />
+                    </radialGradient>
+                  </defs>
+                  <polygon points="100,35 175,85 150,175 50,175 25,85" fill="none" stroke="#cbd5f5" stroke-width="1" />
+                  <polygon points="100,55 153,95 133,150 67,150 47,95" fill="none" stroke="#bfdbfe" stroke-width="1" />
+                  <polygon points="100,73 135,108 121,138 79,138 65,108" fill="none" stroke="#93c5fd" stroke-width="1" />
+                  <polygon points="100,90 128,115 118,130 82,130 72,115" fill="url(#profilePulse)" stroke="#3b82f6" stroke-width="2" />
+                  <text x="100" y="18" text-anchor="middle" class="text-[10px] fill-slate-500">Task Support</text>
+                  <text x="183" y="88" text-anchor="middle" class="text-[10px] fill-slate-500">Learning & Dev</text>
+                  <text x="150" y="190" text-anchor="middle" class="text-[10px] fill-slate-500">Impact & Purpose</text>
+                  <text x="50" y="190" text-anchor="middle" class="text-[10px] fill-slate-500">Wellbeing</text>
+                  <text x="17" y="88" text-anchor="middle" class="text-[10px] fill-slate-500">Support Systems</text>
+                </svg>
+              </div>
+              <dl class="grid grid-cols-2 gap-3 text-sm text-slate-600">
+                <div>
+                  <dt class="font-medium text-slate-500">Task Support</dt>
+                  <dd class="text-xl font-semibold text-slate-900 flex items-baseline gap-1">
+                    3.8<span class="text-xs font-medium text-emerald-600">▲0.2</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-slate-500">Learning & Development</dt>
+                  <dd class="text-xl font-semibold text-slate-900 flex items-baseline gap-1">
+                    2.9<span class="text-xs font-medium text-amber-600">▼0.3</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-slate-500">Wellbeing</dt>
+                  <dd class="text-xl font-semibold text-slate-900 flex items-baseline gap-1">
+                    4.2<span class="text-xs font-medium text-emerald-600">▲0.1</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-slate-500">Impact & Purpose</dt>
+                  <dd class="text-xl font-semibold text-slate-900 flex items-baseline gap-1">
+                    3.4<span class="text-xs font-medium text-emerald-600">▲0.4</span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm font-semibold text-slate-800">Sentiment Trajectory</p>
+              <span class="text-xs text-slate-500">Last five meetings</span>
+            </div>
+            <div class="grid gap-2 text-sm text-slate-600">
+              <div class="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5">
+                <span>Nov 12</span>
+                <span class="flex items-center gap-1 font-semibold text-emerald-600">3.9
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.47 12.53a.75.75 0 0 1 1.06 0L10 18l5.47-5.47a.75.75 0 1 1 1.06 1.06l-6 6a.75.75 0 0 1-1.06 0l-6-6a.75.75 0 0 1 0-1.06Z"/></svg>
+                </span>
+              </div>
+              <div class="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5">
+                <span>Nov 05</span>
+                <span class="flex items-center gap-1 font-semibold text-emerald-600">3.7
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.47 12.53a.75.75 0 0 1 1.06 0L10 18l5.47-5.47a.75.75 0 1 1 1.06 1.06l-6 6a.75.75 0 0 1-1.06 0l-6-6a.75.75 0 0 1 0-1.06Z"/></svg>
+                </span>
+              </div>
+              <div class="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5">
+                <span>Oct 29</span>
+                <span class="flex items-center gap-1 font-semibold text-amber-500">3.5
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.47 7.47a.75.75 0 0 1 1.06 0L10 12l5.47-4.53a.75.75 0 1 1 1.06 1.06l-6 5.5a.75.75 0 0 1-1.06 0l-6-5.5a.75.75 0 0 1 0-1.06Z"/></svg>
+                </span>
+              </div>
+              <div class="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5">
+                <span>Oct 22</span>
+                <span class="flex items-center gap-1 font-semibold text-amber-500">3.4
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.47 7.47a.75.75 0 0 1 1.06 0L10 12l5.47-4.53a.75.75 0 1 1 1.06 1.06l-6 5.5a.75.75 0 0 1-1.06 0l-6-5.5a.75.75 0 0 1 0-1.06Z"/></svg>
+                </span>
+              </div>
+              <div class="flex items-center justify-between bg-white border border-slate-200 rounded-md px-3 py-1.5">
+                <span>Oct 15</span>
+                <span class="flex items-center gap-1 font-semibold text-emerald-600">3.6
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5"><path d="M3.47 12.53a.75.75 0 0 1 1.06 0L10 18l5.47-5.47a.75.75 0 1 1 1.06 1.06l-6 6a.75.75 0 0 1-1.06 0l-6-6a.75.75 0 0 1 0-1.06Z"/></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="border border-slate-200 rounded-lg p-4 mt-4 bg-white">
+            <p class="text-sm font-semibold text-slate-800 mb-2">Development Goals</p>
+            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+              <li>Lead the facilitation of two cross-functional design reviews by end of quarter.</li>
+              <li>Ship the Project Nova narrative deck and gain executive sign-off.</li>
+              <li>Coach the incoming design intern through their onboarding plan.</li>
+            </ul>
+          </div>
+          <div class="border border-slate-200 rounded-lg p-4 space-y-3">
+            <h4 class="text-base font-semibold text-slate-800 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-[var(--brand-primary)]">
+                <path d="M2.5 6.75A2.75 2.75 0 0 1 5.25 4h9.5A2.75 2.75 0 0 1 17.5 6.75v6.5A2.75 2.75 0 0 1 14.75 16h-9.5A2.75 2.75 0 0 1 2.5 13.25v-6.5Zm7.25-.75a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0V6Z"/>
+              </svg>
+              AI Suggestions for Alex
+            </h4>
+            <ul class="space-y-2 text-sm text-slate-600">
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]"></span>
+                Encourage Alex to delegate low-impact tasks this week.
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]"></span>
+                Align on one measurable growth outcome for Q3.
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 rounded-full bg-[var(--brand-accent)]"></span>
+                Celebrate progress on the Nova proposal to reinforce momentum.
+              </li>
+            </ul>
+            <button type="button" class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-semibold text-white bg-[var(--brand-primary-600)] hover:bg-[var(--brand-primary-700)]">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path d="M10.75 3a.75.75 0 0 0-1.5 0v6.19L6.28 6.22a.75.75 0 0 0-1.06 1.06L9.47 11.5l-4.25 4.22a.75.75 0 1 0 1.06 1.06l2.97-2.95v2.97a.75.75 0 0 0 1.5 0v-6.19l2.97 2.97a.75.75 0 1 0 1.06-1.06L10.53 11.5l4.25-4.22a.75.75 0 1 0-1.06-1.06L10.75 9.19Z"/>
+              </svg>
+              Export Profile
+            </button>
+          </div>
+        </aside>
+        <button id="sidebar-handle" type="button" class="flex flex-col items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white bg-[var(--brand-primary-600)] hover:bg-[var(--brand-primary-700)] px-2 rounded-l-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-primary-500)] transition-colors" aria-expanded="false" aria-controls="insights-sidebar" aria-label="Expand profile panel" onclick="toggleInsightsSidebar()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 rotate-180" data-role="handle-icon">
+            <path d="M4.5 10a.75.75 0 0 1 .75-.75h7.19l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5a.75.75 0 0 1 0 1.06l-3.5 3.5a.75.75 0 0 1-1.06-1.06l2.22-2.22H5.25A.75.75 0 0 1 4.5 10Z" />
+          </svg>
+          <span data-role="handle-label">Profile</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- Confirmation Modal HTML -->
+    <div id="modal-backdrop" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+    <div id="confirmation-modal" class="hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-lg shadow-xl z-50 w-11/12 max-w-md border border-slate-200">
+      <h3 class="text-lg font-semibold mb-3 text-slate-800">Discard Action Item?</h3>
+      <p class="text-sm text-slate-600 mb-5">Are you sure you want to discard this action item? This cannot be undone.</p>
+      <div class="flex justify-end space-x-3">
+        <button id="modal-cancel" class="px-4 py-2 text-sm font-medium rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200">Cancel</button>
+        <button id="modal-confirm" class="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">Discard</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- State & Setup ---
+    let openSections = new Set(['step1-container']);
+    let itemToDiscard = null;
+
+    // --- Core UI Functions ---
+    // Updated toggleSection for exclusive accordion
+    function toggleSection(stepId){
+      const container = document.getElementById(`${stepId}-container`);
+      const content = document.getElementById(`${stepId}-content`);
+      const icon = document.getElementById(`${stepId}-icon`);
+      if (!container || !content) return;
+
+      const shouldOpen = !openSections.has(container.id);
+
+      // Close all sections first
+      document.querySelectorAll('section[id$="-container"]').forEach(sec => {
+          const secContent = document.getElementById(sec.id.replace('-container', '-content'));
+          const secIcon = document.getElementById(sec.id.replace('-container', '-icon'));
+          secContent?.classList.add('hidden');
+          secIcon?.classList.remove('chevron-rotated');
+      });
+      openSections.clear();
+
+      // Open the target section if it was closed
+      if (shouldOpen) {
+        content.classList.remove('hidden');
+        icon?.classList.add('chevron-rotated');
+        openSections.add(container.id);
+      }
+    }
+
+
+    function toggleAgendaItem(cardId){
+      document.getElementById(cardId)?.classList.toggle('is-open');
+    }
+
+    function dismissCard(cardId) {
+      event?.stopPropagation();
+      document.getElementById(cardId)?.remove();
+      updateDeferredPlaceholder(); // EDIT 3: Renamed function
+    }
+
+     // --- Confirmation Modal Functions ---
+    function showConfirmationModal(itemId) {
+        itemToDiscard = itemId;
+        document.getElementById('modal-backdrop').classList.remove('hidden');
+        document.getElementById('confirmation-modal').classList.remove('hidden');
+    }
+
+    function hideConfirmationModal() {
+        itemToDiscard = null;
+        document.getElementById('modal-backdrop').classList.add('hidden');
+        document.getElementById('confirmation-modal').classList.add('hidden');
+    }
+
+    function discardActionItemConfirmed() {
+        if (itemToDiscard) {
+            dismissCard(itemToDiscard);
+        }
+        hideConfirmationModal();
+    }
+
+    function confirmDiscardActionItem(itemId) {
+        event?.stopPropagation();
+        showConfirmationModal(itemId);
+    }
+
+
+    // --- Agenda Topic (Main Card) Functions ---
+    function markAsDiscussed(cardId, buttonElement) {
+        event?.stopPropagation();
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        card.classList.remove('topic-deferred');
+        card.classList.add('topic-discussed');
+        const buttons = card.querySelectorAll(':scope > .flex > .flex > .status-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        buttonElement?.classList.add('active');
+
+        // Ensure Defer button resets if Discussed is clicked
+        const deferButton = Array.from(buttons).find(btn => btn.dataset.action === 'defer' || btn.dataset.action === 'undefer');
+        if (deferButton) {
+            deferButton.textContent = 'Defer';
+            deferButton.dataset.action = 'defer';
+            deferButton.classList.remove('active'); // Remove active if discussed
+             // Ensure it's not active if Discussed is clicked and it was Defer
+            if (buttonElement !== deferButton) {
+                deferButton.classList.remove('active');
+            }
+        }
+    }
+
+    // Combined defer/undefer logic for TOPICS
+    function handleDeferToggle(cardId, buttonElement) {
+        event?.stopPropagation();
+        const card = document.getElementById(cardId);
+        const deferredList = document.getElementById('deferredActionList'); // Topics now also go here
+        // EDIT 3: More robust parent finding
+        const originalParentListId = card.dataset.originalParent || card.closest('.space-y-3')?.id || 'drItemsList';
+        const agendaList = document.getElementById(originalParentListId);
+        if (!card || !deferredList || !agendaList) return;
+
+        const isDeferring = buttonElement.dataset.action === 'defer';
+
+        // Reset other status buttons first
+        const buttons = card.querySelectorAll(':scope > .flex > .flex > .status-btn');
+        buttons.forEach(btn => {
+            if (btn !== buttonElement) btn.classList.remove('active');
+        });
+        card.classList.remove('topic-discussed'); // Remove discussed if deferring/undeferring
+
+        if (isDeferring) {
+            card.classList.add('topic-deferred');
+            if (!card.dataset.originalParent) { // Store original parent only once
+                card.dataset.originalParent = originalParentListId;
+            }
+            deferredList.appendChild(card);
+            buttonElement.textContent = 'Undefer';
+            buttonElement.dataset.action = 'undefer';
+            buttonElement.classList.add('active');
+        } else { // Undeferring Topic
+            card.classList.remove('topic-deferred');
+            const originalParent = document.getElementById(card.dataset.originalParent || 'drItemsList');
+             if(originalParent) {
+                 originalParent.appendChild(card); // Move back to original list
+             } else {
+                 agendaList.appendChild(card); // Fallback if original parent not found
+             }
+            buttonElement.textContent = 'Defer';
+            buttonElement.dataset.action = 'defer';
+            buttonElement.classList.remove('active'); // No longer active when moved back
+        }
+        updateDeferredPlaceholder(); // EDIT 3: Renamed function
+    }
+
+
+     function addAISuggestionToAgenda(cardId){
+        const card = document.getElementById(cardId);
+        const agendaList = document.getElementById('drItemsList');
+        if (!card || !agendaList) return;
+
+        const clone = card.cloneNode(true);
+        const newCardId = 'agenda-item-ai-' + Date.now();
+        clone.id = newCardId;
+
+        // Keep ai-suggestion-card for border, add ai-badge later
+        clone.querySelectorAll('.ai-badge').forEach(el=>el.remove());
+        clone.querySelectorAll('button[aria-label="Add suggestion to agenda"], button[aria-label="Dismiss suggestion"]').forEach(el => el.closest('.flex.items-center.space-x-2')?.remove());
+        clone.querySelectorAll('.agenda-card-content button').forEach(btn => {
+            if(btn.textContent.includes('+ Add to Agenda') || btn.textContent.includes('Dismiss')) {
+                btn.closest('.flex.items-center.space-x-4')?.remove();
+            }
+        });
+
+         const header = clone.querySelector(':scope > .flex.justify-between');
+         if (header) {
+             // Add AI Badge to title area
+             const titleDiv = header.querySelector('.flex-1 > .flex.items-center');
+             if (titleDiv) {
+                 const badge = document.createElement('span');
+                 badge.className = 'ai-badge';
+                 badge.textContent = 'AI';
+                 titleDiv.insertBefore(badge, titleDiv.children[1]); // Insert before title text
+             }
+
+             const buttonContainer = document.createElement('div');
+             buttonContainer.className = 'flex items-center space-x-2';
+             buttonContainer.innerHTML = `
+                 <button onclick="markAsDiscussed('${newCardId}', this); event.stopPropagation();" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Discussed</button>
+                 <button onclick="handleDeferToggle('${newCardId}', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                 <!-- EDIT 1: Added dismiss button -->
+                 <button onclick="dismissCard('${newCardId}'); event.stopPropagation();" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Dismiss suggestion">
+                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"> <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /> </svg>
+                 </button>
+                 <svg onclick="toggleAgendaItem('${newCardId}')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+             `;
+             header.appendChild(buttonContainer);
+
+            const toggleDiv = header.querySelector('.flex-1.cursor-pointer');
+            if(toggleDiv) toggleDiv.setAttribute('onclick', `toggleAgendaItem('${newCardId}')`);
+            const toggleSvg = buttonContainer.querySelector('svg.chevron-icon');
+            if(toggleSvg) toggleSvg.setAttribute('onclick', `toggleAgendaItem('${newCardId}'); event.stopPropagation();`);
+
+            const content = clone.querySelector('.agenda-card-content');
+            if (content && !content.querySelector('.nested-action-items')) {
+                 const nestedContainer = document.createElement('div');
+                 nestedContainer.className = 'mt-4';
+                 nestedContainer.innerHTML = `
+                     <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                     <div class="space-y-2 nested-action-items"></div>
+                     <button onclick="addNestedActionItem(this, '${newCardId}')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                 `;
+                 const insertBeforeEl = Array.from(content.children).find(el => !el.classList.contains('text-slate-500'));
+                 if(insertBeforeEl) {
+                    content.insertBefore(nestedContainer, insertBeforeEl);
+                 } else {
+                    content.appendChild(nestedContainer);
+                 }
+            }
+         }
+
+        agendaList.appendChild(clone);
+        card.remove();
+    }
+
+
+    // --- Action Item (Task Card) Functions ---
+    function selectActionStatus(cardId, status, buttonElement) {
+        event?.stopPropagation();
+        const card = document.getElementById(cardId);
+        if (!card) return;
+
+        const buttons = card.querySelectorAll('.status-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        buttonElement?.classList.add('active'); // Use optional chaining
+
+        card.classList.remove('status-done', 'status-todo', 'status-defer'); // EDIT 3: Renamed status-park
+        card.dataset.status = status;
+        if (status !== 'none') {
+            card.classList.add(`status-${status}`); // EDIT 3: Renamed status-park
+        }
+
+        // Defer/Undefer button logic is handled separately by handleActionDeferToggle
+        const deferButton = Array.from(buttons).find(btn => btn.dataset.action === 'defer' || btn.dataset.action === 'undefer');
+        if (deferButton && status !== 'defer') {
+            deferButton.textContent = 'Defer';
+            deferButton.dataset.action = 'defer';
+            deferButton.classList.remove('active');
+        }
+
+         // EDIT 4: Only move back if NOT deferring and currently deferred
+        const deferredList = document.getElementById('deferredActionList'); // EDIT 3: Renamed ID
+        const isCurrentlyDeferred = card.parentElement === deferredList || card.closest('#deferredActionList');
+
+        if (status === 'defer') {
+             // handled by handleActionDeferToggle
+        } else if (isCurrentlyDeferred) {
+             // EDIT 4: Move back if done or todo clicked while deferred
+             handleActionDeferToggle(cardId, deferButton); // Simulate undeferring
+        }
+
+        updateDeferredPlaceholder(); // EDIT 3: Renamed function
+    }
+
+    // EDIT 4: New function for action item defer/undefer toggle
+    function handleActionDeferToggle(cardId, buttonElement) {
+        event?.stopPropagation();
+        const card = document.getElementById(cardId);
+        const deferredList = document.getElementById('deferredActionList');
+        const followupsList = document.getElementById('followupsList');
+        // Find original parent for nested items if needed (more complex logic might be required if deeply nested)
+        const originalParentNestedList = document.getElementById(card.dataset.originalParent)?.querySelector('.nested-action-items');
+        const defaultParent = followupsList; // Default to main followups if no other parent found
+
+        if (!card || !deferredList || !defaultParent) return;
+
+        const isDeferring = buttonElement.dataset.action === 'defer';
+
+        // Reset other status buttons
+        const buttons = card.querySelectorAll('.status-btn');
+        buttons.forEach(btn => {
+            if (btn !== buttonElement) btn.classList.remove('active');
+        });
+
+        if (isDeferring) {
+            // Store previous status before deferring
+            if(card.dataset.status && card.dataset.status !== 'defer') {
+                 card.dataset.previousStatus = card.dataset.status;
+            }
+            card.classList.remove('status-done', 'status-todo');
+            card.classList.add('status-defer');
+            card.dataset.status = 'defer';
+            if (!card.dataset.originalParent) { // Store original parent only once
+                 card.dataset.originalParent = card.closest('.nested-action-items') ? card.closest('.agenda-card').id : 'followupsList';
+            }
+            deferredList.appendChild(card);
+            buttonElement.textContent = 'Undefer';
+            buttonElement.dataset.action = 'undefer';
+            buttonElement.classList.add('active');
+        } else { // Undeferring Action Item
+            card.classList.remove('status-defer');
+            // If it had a status before deferring, restore it, otherwise default to 'todo'
+            const previousStatus = card.dataset.previousStatus || 'todo';
+            card.dataset.status = previousStatus;
+            card.classList.add(`status-${previousStatus}`);
+
+            const originalParent = document.getElementById(card.dataset.originalParent);
+            let targetList;
+            if (card.dataset.originalParent === 'followupsList') {
+                targetList = followupsList;
+            } else if (originalParent) {
+                 targetList = originalParent.querySelector('.nested-action-items');
+                 // If nested list doesn't exist (e.g., parent topic was deferred/removed), fallback
+                 if (!targetList) targetList = defaultParent;
+            } else {
+                targetList = defaultParent; // Fallback
+            }
+
+            targetList.appendChild(card); // Move back
+
+            buttonElement.textContent = 'Defer';
+            buttonElement.dataset.action = 'defer';
+            buttonElement.classList.remove('active');
+
+             // Reactivate the original status button
+            const statusButton = Array.from(buttons).find(btn => btn.textContent.toLowerCase().includes(previousStatus));
+            statusButton?.classList.add('active');
+            delete card.dataset.previousStatus; // Clean up temp state
+        }
+        updateDeferredPlaceholder();
+    }
+
+
+    function addNestedActionItem(buttonElement, parentCardId) {
+        const description = prompt("New action item:");
+        if (!description || !description.trim()) return;
+
+        const owner = "Alex";
+        const actionCard = createActionCardElement(`nested-action-${parentCardId}-${Date.now()}`, description.trim(), owner, 'todo');
+
+        const listContainer = buttonElement.previousElementSibling;
+        if (listContainer) {
+            listContainer.appendChild(actionCard);
+        }
+    }
+
+    function createActionCardElement(id, description, owner, status) {
+        const card = document.createElement('div');
+        card.id = id;
+        card.className = `action-card status-${status}`;
+        card.dataset.status = status;
+        card.dataset.owner = owner;
+
+        card.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+               <!-- EDIT 1: Moved assignee pill -->
+               <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: ${owner}</button>
+              <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                 <p class="text-sm font-semibold text-slate-900">${description}</p>
+                 <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+              </div>
+              <div class="flex items-center space-x-2 flex-shrink-0">
+                <button onclick="selectActionStatus('${id}','done', this)" class="status-btn ${status === 'done' ? 'active' : ''} px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                <button onclick="selectActionStatus('${id}','todo', this)" class="status-btn ${status === 'todo' ? 'active' : ''} px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                <button onclick="handleActionDeferToggle('${id}', this)" data-action="${status === 'defer' ? 'undefer' : 'defer'}" class="status-btn ${status === 'defer' ? 'active' : ''} px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">${status === 'defer' ? 'Undefer' : 'Defer'}</button>
+                 <button class="action-dismiss-button" onclick="confirmDiscardActionItem('${id}')">
+                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                 </button>
+              </div>
+            </div>`;
+        return card;
+    }
+
+
+    // --- Wrap Up Section Functions ---
+    function addActionItem(listId, defaultOwner){
+      const list = document.getElementById(listId);
+      if(!list) return;
+      const description = prompt('What is the action item?');
+      if (!description || !description.trim()) return;
+      const owner = defaultOwner || 'Alex';
+      const item = createWrapUpActionItemElement(description.trim(), owner);
+      list.appendChild(item);
+    }
+
+    function createWrapUpActionItemElement(description, owner) {
+        const item = document.createElement('div');
+        const itemId = `wrapup-action-${Date.now()}`;
+        item.id = itemId;
+        item.className = 'p-3 bg-white rounded-lg border border-slate-200 action-item relative';
+        item.dataset.owner = owner;
+        item.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2 flex-1">
+                <span class="text-slate-800 text-sm font-semibold" data-role="description">${description}</span>
+                <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+              </div>
+              <div class="flex items-center gap-2">
+                  <button type="button" class="text-xs font-medium px-2 py-1 rounded-full accent-pill self-start sm:self-center" onclick="toggleActionOwner(event,this)" data-role="assignee-label">Assignee: ${owner}</button>
+                  <button type="button" class="text-xs text-slate-500 hover:text-slate-700 font-medium" onclick="deferActionItem(event, this)">Defer</button>
+                   <button type="button" class="text-red-600 hover:text-red-800 font-medium p-1 -m-1" onclick="confirmDiscardActionItem('${itemId}')" aria-label="Discard">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                   </button>
+              </div>
+            </div>`;
+        return item;
+    }
+
+    function editActionDescription(evt, buttonElement){
+      evt?.stopPropagation();
+      const item = buttonElement.closest('.action-item, .action-card');
+      if (!item) return;
+      const descEl = item.querySelector('p.font-semibold, span[data-role="description"]');
+      if (!descEl) return;
+      const currentText = descEl.textContent.trim();
+      const updated = prompt('Update action item description:', currentText);
+      if (updated && updated.trim()){
+        descEl.textContent = updated.trim();
+      }
+    }
+
+     function toggleActionOwner(evt, buttonElement){
+      evt?.stopPropagation();
+      const item = buttonElement.closest('.action-item, .action-card');
+       if(!item) return;
+       const isWrapUp = item.closest('#step4-content');
+       const currentOwner = item.dataset.owner === 'You' ? 'You' : 'Alex';
+       const newOwner = currentOwner === 'Alex' ? 'You' : 'Alex';
+       item.dataset.owner = newOwner;
+
+        if (isWrapUp) {
+            const label = item.querySelector('[data-role="assignee-label"]');
+            if (label) label.textContent = `Assignee: ${newOwner}`;
+             const targetListId = newOwner === 'Alex' ? 'alex-action-list' : 'leader-action-list';
+             document.getElementById(targetListId)?.appendChild(item);
+        } else {
+            // Update button text for non-wrapup action cards
+            buttonElement.textContent = `Assignee: ${newOwner}`;
+        }
+     }
+
+
+     function deferActionItem(evt, buttonElement) {
+         evt?.stopPropagation();
+         const item = buttonElement.closest('.action-item');
+         if (!item) return;
+         item.classList.toggle('deferred');
+         buttonElement.textContent = item.classList.contains('deferred') ? 'Undefer' : 'Defer';
+     }
+
+
+    // --- Utility Functions ---
+     // EDIT 3: Renamed function
+    function updateDeferredPlaceholder() {
+        const deferredList = document.getElementById('deferredActionList'); // EDIT 3: Renamed ID
+        const placeholder = document.getElementById('deferred-action-placeholder'); // EDIT 3: Renamed ID
+        if (!deferredList || !placeholder) return;
+        const hasRealItems = Array.from(deferredList.children).some(child => child !== placeholder);
+        placeholder.style.display = hasRealItems ? 'none' : 'block';
+    }
+
+    function showAddPlaceholder(kind) {
+        alert(`Add ${kind} functionality coming soon!`);
+    }
+
+    function toggleInsightsSidebar() {
+        const layoutShell = document.getElementById('layout-shell');
+        const sidebar = document.getElementById('insights-sidebar');
+        if (!layoutShell || !sidebar) return;
+        const collapsed = layoutShell.classList.toggle('sidebar-collapsed');
+        sidebar.setAttribute('aria-hidden', String(collapsed));
+
+        const collapseButton = document.getElementById('sidebar-collapse');
+        if (collapseButton) {
+            collapseButton.setAttribute('aria-expanded', String(!collapsed));
+            collapseButton.setAttribute('aria-label', collapsed ? 'Show profile panel' : 'Collapse profile panel');
+            const label = collapseButton.querySelector('[data-role="collapse-label"]');
+            const icon = collapseButton.querySelector('[data-role="collapse-icon"]');
+            if (label) label.textContent = collapsed ? 'Show Profile' : 'Hide Profile';
+            if (icon) icon.classList.toggle('rotate-180', collapsed);
+        }
+
+        const handleButton = document.getElementById('sidebar-handle');
+        if (handleButton) {
+            handleButton.setAttribute('aria-expanded', String(!collapsed));
+            handleButton.setAttribute('aria-label', collapsed ? 'Show profile panel' : 'Collapse profile panel');
+            const handleIcon = handleButton.querySelector('[data-role="handle-icon"]');
+            const handleLabel = handleButton.querySelector('[data-role="handle-label"]');
+            if (handleIcon) handleIcon.classList.toggle('rotate-180', collapsed);
+            if (handleLabel) handleLabel.textContent = collapsed ? 'Profile' : 'Hide';
+        }
+    }
+
+    // --- Initialisation ---
+    document.addEventListener('DOMContentLoaded',()=>{
+      // Force only step 1 open initially
+      document.querySelectorAll('section[id$="-container"]').forEach(sec => {
+          const secContent = document.getElementById(sec.id.replace('-container', '-content'));
+          const secIcon = document.getElementById(sec.id.replace('-container', '-icon'));
+          if (sec.id === 'step1-container') {
+              secContent?.classList.remove('hidden');
+              secIcon?.classList.add('chevron-rotated');
+              openSections.add(sec.id);
+          } else {
+              secContent?.classList.add('hidden');
+              secIcon?.classList.remove('chevron-rotated');
+              openSections.delete(sec.id); // Ensure others are removed from state
+          }
+      });
+
+      updateDeferredPlaceholder(); // EDIT 3: Renamed function call
+
+       document.getElementById('modal-cancel').addEventListener('click', hideConfirmationModal);
+       document.getElementById('modal-confirm').addEventListener('click', discardActionItemConfirmed);
+       document.getElementById('modal-backdrop').addEventListener('click', hideConfirmationModal);
+    });
+
+    // --- Timer ---
+    const meetingDuration = 45*60;
+    let elapsedSeconds = 600;
+    const timerElement = document.getElementById('timer-display');
+    const progressElement = document.getElementById('progress-bar');
+    const totalMinutes = Math.floor(meetingDuration/60);
+    const labelOpen=document.getElementById('label-open'), labelTactics=document.getElementById('label-tactics'), labelStrategy=document.getElementById('label-strategy'), labelWrap=document.getElementById('label-wrap');
+
+    function setActivePhase(phase){
+      [labelOpen,labelTactics,labelStrategy,labelWrap].forEach(l=>l?.classList.remove('phase-active'));
+      if(phase==='open') labelOpen?.classList.add('phase-active');
+      else if(phase==='tactics') labelTactics?.classList.add('phase-active');
+      else if(phase==='strategy') labelStrategy?.classList.add('phase-active');
+      else if(phase==='wrap') labelWrap?.classList.add('phase-active');
+    }
+
+    function updatePhaseByTime(min){
+      if(min<5) setActivePhase('open');
+      else if(min<30) setActivePhase('tactics');
+      else if(min<40) setActivePhase('strategy');
+      else setActivePhase('wrap');
+    }
+
+    function updateTimer(){
+      elapsedSeconds = Math.min(elapsedSeconds + 1, meetingDuration);
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
+      const formatted = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      if(timerElement) timerElement.textContent = `${formatted} / ${totalMinutes}:00 Total`;
+      const percentage = (elapsedSeconds / meetingDuration) * 100;
+      if(progressElement) progressElement.style.width = `${percentage}%`;
+      updatePhaseByTime(minutes);
+      if(elapsedSeconds >= meetingDuration){ clearInterval(timerInterval); }
+    }
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+  </script>
+</body>
+</html>

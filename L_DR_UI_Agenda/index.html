@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monark 1:1 Agenda Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #0b1221;
+      --tab: #1f2937;
+      --tab-active: #2563eb;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 16px;
+    }
+    header {
+      width: 100%;
+      max-width: 1280px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    h1 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+    .subtitle { color: #94a3b8; font-size: 0.95rem; }
+    .tabs {
+      display: inline-flex;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tab {
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: #cbd5e1;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .tab:hover { background: #111827; }
+    .tab.active {
+      background: var(--tab-active);
+      color: #f8fafc;
+    }
+    .viewframe {
+      width: 100%;
+      max-width: 1280px;
+      height: 80vh;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+    }
+    iframe.active { display: block; }
+    footer {
+      max-width: 1280px;
+      width: 100%;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Monark 1:1 Agenda Demo</h1>
+      <div class="subtitle">Toggle between Direct Report and Leader views in one page.</div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-target="dr-frame" role="tab" aria-controls="dr-frame" aria-selected="true">Direct Report View</button>
+      <button class="tab" data-target="leader-frame" role="tab" aria-controls="leader-frame" aria-selected="false">Leader View</button>
+    </div>
+  </header>
+
+  <div class="viewframe">
+    <iframe id="dr-frame" class="active" title="Direct Report View" src="followerview.html"></iframe>
+    <iframe id="leader-frame" title="Leader View" src="leaderview.html"></iframe>
+  </div>
+
+  <footer>
+    <p>Notes: This is a static demo. Publish by dropping this folder on GitHub (or GitHub Pages) and share the link; no backend needed.</p>
+  </footer>
+
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const frames = document.querySelectorAll('iframe');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        frames.forEach(f => f.classList.remove('active'));
+        tab.classList.add('active');
+        const targetId = tab.dataset.target;
+        document.getElementById(targetId).classList.add('active');
+        tabs.forEach(t => t.setAttribute('aria-selected', t === tab ? 'true' : 'false'));
+      });
+    });
+  </script>
+</body>
+</html>

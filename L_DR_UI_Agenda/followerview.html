@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Direct Report 1:1 Agenda</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand-primary:#395965;
+      --brand-primary-700:#2f4a54;
+      --brand-primary-600:#355360;
+      --brand-primary-500:#3b5d6a;
+      --brand-primary-400:#4b6f7b;
+      --brand-primary-300:#5f8491;
+      --step1-start:#172554;
+      --step1-end:#1e3a8a;
+      --step2-start:#1e3a8a;
+      --step2-end:#1d4ed8;
+      --step3-start:#1d4ed8;
+      --step3-end:#2563eb;
+      --step4-start:#2563eb;
+      --step4-end:#1e40af;
+      --card-border:#e2e8f0;
+    }
+
+    body{font-family:'Inter',sans-serif;background:#f7fafc;color:#0f172a;}
+    .brand-title{color:var(--brand-primary);}
+    .step-card{background:#fff;border:1px solid var(--card-border);}
+    .badge-2{background:linear-gradient(135deg,var(--step2-start),var(--step2-end));box-shadow:0 6px 18px rgba(57,89,101,.22);}
+    .badge-3{background:linear-gradient(135deg,var(--step4-start),var(--step4-end));box-shadow:0 6px 18px rgba(57,89,101,.18);}
+    .agenda-card{background:#fff;border:1px solid var(--card-border);border-left:6px solid var(--brand-primary-300);border-radius:0.75rem;}
+    .agenda-card-content{display:none;padding:1rem;border-top:1px solid var(--card-border);} 
+    .agenda-card.is-open .agenda-card-content{display:block;}
+    .agenda-card.is-open .chevron-icon{transform:rotate(180deg);} 
+    .topic-discussed{border-left-color:#10b981!important;}
+    .topic-deferred{border-left-color:#94a3b8!important;}
+    .topic-check-icon{display:none;color:#047857;align-items:center;}
+    .topic-discussed .topic-check-icon{display:inline-flex;}
+    .action-card{background:#fff;border:1px solid var(--card-border);padding:0.75rem 2.5rem 0.75rem 0.75rem;border-radius:0.5rem;position:relative;box-shadow:0 1px 2px rgb(15 23 42 / 0.08);} 
+    .action-card.status-done{background:#ecfdf5;border-color:#a7f3d0;}
+    .action-card.status-todo{background:#fffbeb;border-color:#fde68a;}
+    .action-card.status-defer{background:#f8fafc;border-color:#e2e8f0;}
+    .status-btn{transition:all .15s ease;}
+    .status-btn.active{font-weight:600;}
+    .action-dismiss-button{position:absolute;top:50%;right:0.75rem;transform:translateY(-50%);background:none;border:none;color:#94a3b8;}
+    .action-dismiss-button:hover{color:#475569;}
+    .accent-pill{background:rgba(252,189,31,.12);color:#8a6b06;border:1px solid rgba(252,189,31,.35);} 
+    .action-item.deferred{text-decoration:line-through;opacity:.6;}
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold brand-title">Direct Report Agenda</h1>
+        <p class="text-slate-500 text-sm">Prep the essentials before you sit down with your manager.</p>
+      </div>
+      <div class="mt-2 w-full md:w-[28rem]">
+        <div class="flex justify-between text-sm text-slate-600 mb-1">
+          <span>Elapsed Time</span>
+          <span id="timer-display">00:00 / 45:00 Total</span>
+        </div>
+        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden border border-slate-200">
+          <div id="progress-bar" class="h-2.5 rounded-full" style="background:linear-gradient(90deg,var(--step1-start),var(--step2-end));width:0%;"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mt-6 space-y-6">
+      <section id="step2-container" class="step-2 step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step2')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-2">1</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Progress & Priorities</h2>
+            </div>
+          </div>
+          <svg id="step2-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform chevron-icon"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+        <div id="step2-content" class="p-4 md:p-6 border-t border-slate-200 space-y-6">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Action Items from Previous Meetings</h3>
+            <div class="space-y-2" id="followupsList">
+              <div id="action-item-1" class="action-card status-todo" data-status="todo" data-owner="Alex" data-original-parent="followupsList">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                  <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                  <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                    <p class="text-sm font-semibold text-slate-900">Finalize Q3 proposal deck</p>
+                    <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                  </div>
+                  <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button onclick="selectActionStatus('action-item-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                    <button onclick="selectActionStatus('action-item-1','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                    <button onclick="handleActionDeferToggle('action-item-1', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('action-item-1')">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="action-item-followup-2" class="action-card status-done" data-status="done" data-owner="You" data-original-parent="followupsList">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                  <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2" onclick="toggleActionOwner(event, this)">Assignee: You</button>
+                  <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                    <p class="text-sm font-semibold text-slate-900">Send Alex onboarding doc feedback</p>
+                    <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                  </div>
+                  <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button onclick="selectActionStatus('action-item-followup-2','done', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                    <button onclick="selectActionStatus('action-item-followup-2','todo', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                    <button onclick="handleActionDeferToggle('action-item-followup-2', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('action-item-followup-2')">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" onclick="showAddPlaceholder('action item')" class="mt-3 ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[var(--brand-primary-600)] hover:bg-[var(--brand-primary-700)] px-3 py-1.5 rounded-md shadow-sm transition-colors">+ Add Action Item</button>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Agenda Topics</h3>
+            <div class="space-y-3" id="drItemsList">
+              <div id="agenda-item-1" class="agenda-card rounded-lg shadow-sm">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('agenda-item-1')" class="flex-1 cursor-pointer pr-4 group">
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-lg font-semibold text-slate-900">Launch plan for Project Nova</h4>
+                      <span class="topic-check-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg></span>
+                    </div>
+                    <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 29, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="handleDeferToggle('agenda-item-1', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <svg onclick="toggleAgendaItem('agenda-item-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="text-sm font-medium text-slate-700">Shared Notes</label>
+                      <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 space-y-2 text-sm">
+                      <p>"Feeling blocked on the marketing assets. The current designs don't match the brief we agreed on."</p>
+                      <ul class="list-disc list-inside space-y-1">
+                        <li>Need help escalating this with the creative team.</li>
+                        <li>Can we review the brief together to make sure I'm not missing anything?</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                      <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                      <div class="space-y-2 nested-action-items">
+                        <div id="nested-action-1-1" class="action-card status-todo" data-status="todo" data-owner="Alex" data-original-parent="agenda-item-1">
+                          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                            <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                            <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                              <p class="text-sm font-semibold text-slate-900">Draft marketing asset brief</p>
+                              <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                              <button onclick="selectActionStatus('nested-action-1-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                              <button onclick="selectActionStatus('nested-action-1-1','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                              <button onclick="handleActionDeferToggle('nested-action-1-1', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                              <button class="action-dismiss-button" onclick="confirmDiscardActionItem('nested-action-1-1')">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <button onclick="addNestedActionItem(this, 'agenda-item-1')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="agenda-item-2" class="agenda-card rounded-lg shadow-sm">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('agenda-item-2')" class="flex-1 cursor-pointer pr-4 group">
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-lg font-semibold text-slate-900">Q4 team event planning</h4>
+                      <span class="topic-check-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg></span>
+                    </div>
+                    <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 27, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="handleDeferToggle('agenda-item-2', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <svg onclick="toggleAgendaItem('agenda-item-2')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="text-sm font-medium text-slate-700">Shared Notes</label>
+                      <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 space-y-2 text-sm">
+                      <p>"Need to decide on a budget and activity, any ideas?"</p>
+                      <ul class="list-disc list-inside space-y-1">
+                        <li>Option 1: Bowling ($50/person)</li>
+                        <li>Option 2: Escape Room ($70/person)</li>
+                        <li>Need to book by next week.</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                      <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                      <div class="space-y-2 nested-action-items"></div>
+                      <button onclick="addNestedActionItem(this, 'agenda-item-2')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="agenda-item-ai-1" class="agenda-card rounded-lg shadow-sm">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('agenda-item-ai-1')" class="flex-1 cursor-pointer pr-4 group">
+                    <div class="flex items-center gap-2">
+                      <h4 class="text-lg font-semibold text-slate-900">Check in on workload sentiment</h4>
+                      <span class="topic-check-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.5 6.585a1 1 0 0 1-1.428.006l-3.3-3.25a1 1 0 0 1 1.4-1.428l2.583 2.547 5.793-5.87a1 1 0 0 1 1.446-.004Z"/></svg></span>
+                    </div>
+                    <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Added: Oct 29, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="handleDeferToggle('agenda-item-ai-1', this); event.stopPropagation();" data-action="defer" class="status-btn px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                    <svg onclick="toggleAgendaItem('agenda-item-ai-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="text-sm font-medium text-slate-700">Shared Notes</label>
+                      <button class="flex items-center text-sm text-[var(--brand-primary)] hover:opacity-80 font-medium">Edit</button>
+                    </div>
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-md text-slate-800 text-sm space-y-2">
+                      <p>Explore the "stretched" feeling. Ask an open-ended question to understand the root cause and see if it's tied to the Project Nova blockers.</p>
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                      <h5 class="text-sm font-semibold text-slate-600 mb-2">Action Items</h5>
+                      <div class="space-y-2 nested-action-items"></div>
+                      <button onclick="addNestedActionItem(this, 'agenda-item-ai-1')" class="mt-2 text-xs font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" onclick="showAddPlaceholder('topic')" class="mt-3 ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[var(--brand-primary-600)] hover:bg-[var(--brand-primary-700)] px-3 py-1.5 rounded-md shadow-sm transition-colors">+ Add Topic</button>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-semibold text-slate-800 mb-3">Deferred Items</h3>
+            <div id="deferredActionList" class="space-y-3">
+              <p id="deferred-action-placeholder" class="text-sm text-slate-500 italic">No items deferred yet.</p>
+              <div id="parked-action-1" class="action-card status-defer" data-status="defer" data-owner="You" data-original-parent="followupsList">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                  <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: You</button>
+                  <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                    <p class="text-sm font-semibold text-slate-900">Revisit Q4 hiring plan</p>
+                    <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                  </div>
+                  <div class="flex items-center space-x-2 flex-shrink-0">
+                    <button onclick="selectActionStatus('parked-action-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                    <button onclick="selectActionStatus('parked-action-1','todo', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                    <button onclick="handleActionDeferToggle('parked-action-1', this)" data-action="undefer" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Undefer</button>
+                    <button class="action-dismiss-button" onclick="confirmDiscardActionItem('parked-action-1')">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="parked-topic-1" class="agenda-card topic-deferred rounded-lg shadow-sm" data-original-parent="drItemsList">
+                <div class="flex justify-between items-center p-3">
+                  <div onclick="toggleAgendaItem('parked-topic-1')" class="flex-1 cursor-pointer pr-4 group">
+                    <h4 class="text-lg font-semibold text-slate-900">Discuss new vendor options</h4>
+                    <p class="text-slate-500 text-sm mt-1 truncate"><span class="text-xs text-slate-400 creation-date">Deferred: Oct 15, 2025</span></p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <button onclick="handleDeferToggle('parked-topic-1', this); event.stopPropagation();" data-action="undefer" class="status-btn active px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Undefer</button>
+                    <svg onclick="toggleAgendaItem('parked-topic-1')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-slate-500 transition-transform chevron-icon cursor-pointer"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                  </div>
+                </div>
+                <div class="agenda-card-content space-y-4">
+                  <p class="text-sm text-slate-700">Deferred for 2 weeks.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="step4-container" class="step-card rounded-xl overflow-hidden shadow-sm">
+        <div onclick="toggleSection('step4')" class="flex justify-between items-center p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div>
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold badge-3">2</span>
+              <h2 class="text-2xl font-semibold" style="color:var(--brand-primary-500)">Wrap-up & Commitments</h2>
+            </div>
+          </div>
+          <svg id="step4-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 text-slate-500 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+        <div id="step4-content" class="p-4 md:p-6 border-t border-slate-200 hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-800 mb-3">Your Action Items</h3>
+              <div id="drWrapList" class="space-y-2">
+                <div id="wrapup-action-1" class="action-card status-todo" data-status="todo" data-owner="Alex" data-original-parent="drWrapList">
+                  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                    <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                      <p class="text-sm font-semibold text-slate-900">Draft marketing asset brief</p>
+                      <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                    </div>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                      <button onclick="selectActionStatus('wrapup-action-1','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                      <button onclick="selectActionStatus('wrapup-action-1','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                      <button onclick="handleActionDeferToggle('wrapup-action-1', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                      <button class="action-dismiss-button" onclick="confirmDiscardActionItem('wrapup-action-1')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div id="wrapup-action-2" class="action-card status-todo" data-status="todo" data-owner="Alex" data-original-parent="drWrapList">
+                  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+                    <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                      <p class="text-sm font-semibold text-slate-900">Book Q4 team event</p>
+                      <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                    </div>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                      <button onclick="selectActionStatus('wrapup-action-2','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                      <button onclick="selectActionStatus('wrapup-action-2','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                      <button onclick="handleActionDeferToggle('wrapup-action-2', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                      <button class="action-dismiss-button" onclick="confirmDiscardActionItem('wrapup-action-2')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button type="button" onclick="showAddPlaceholder('action item')" class="mt-3 inline-flex items-center text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-slate-800 mb-3">Manager's Action Items</h3>
+              <div id="managerWrapList" class="space-y-2">
+                <div id="wrapup-action-3" class="action-card status-todo" data-status="todo" data-owner="You" data-original-parent="managerWrapList">
+                  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: You</button>
+                    <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+                      <p class="text-sm font-semibold text-slate-900">Review budget for freelance designer</p>
+                      <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+                    </div>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                      <button onclick="selectActionStatus('wrapup-action-3','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+                      <button onclick="selectActionStatus('wrapup-action-3','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+                      <button onclick="handleActionDeferToggle('wrapup-action-3', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+                      <button class="action-dismiss-button" onclick="confirmDiscardActionItem('wrapup-action-3')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button type="button" onclick="showAddPlaceholder('action item')" class="mt-3 inline-flex items-center text-sm font-medium text-[var(--brand-primary)] hover:opacity-80">+ Add Action Item</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="modal-backdrop" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40"></div>
+    <div id="confirmation-modal" class="hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-lg shadow-xl z-50 w-11/12 max-w-md border border-slate-200">
+      <h3 class="text-lg font-semibold mb-3 text-slate-800">Discard Action Item?</h3>
+      <p class="text-sm text-slate-600 mb-5">Are you sure you want to discard this action item? This cannot be undone.</p>
+      <div class="flex justify-end space-x-3">
+        <button id="modal-cancel" class="px-4 py-2 text-sm font-medium rounded-md text-slate-700 bg-slate-100 hover:bg-slate-200">Cancel</button>
+        <button id="modal-confirm" class="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">Discard</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let openSectionId = 'step2-container';
+    let itemToDiscard = null;
+
+    function toggleSection(stepId){
+      const container = document.getElementById(`${stepId}-container`);
+      const content = document.getElementById(`${stepId}-content`);
+      const icon = document.getElementById(`${stepId}-icon`);
+      if (!container || !content) return;
+
+      const isOpen = openSectionId === container.id && !content.classList.contains('hidden');
+      if (isOpen) {
+        content.classList.add('hidden');
+        icon?.classList.remove('chevron-rotated');
+        openSectionId = null;
+        return;
+      }
+
+      document.querySelectorAll('section[id$="-container"]').forEach(sec => {
+        const secContent = document.getElementById(sec.id.replace('-container', '-content'));
+        const secIcon = document.getElementById(sec.id.replace('-container', '-icon'));
+        if (sec !== container) {
+          secContent?.classList.add('hidden');
+          secIcon?.classList.remove('chevron-rotated');
+        }
+      });
+
+      content.classList.remove('hidden');
+      icon?.classList.add('chevron-rotated');
+      openSectionId = container.id;
+    }
+
+    function toggleAgendaItem(id){
+      const card=document.getElementById(id);
+      card?.classList.toggle('is-open');
+    }
+
+    function markAsDiscussed(id, button){
+      const card=document.getElementById(id);
+      if(!card) return;
+      button.classList.add('active');
+      card.classList.add('topic-discussed');
+    }
+
+    function handleDeferToggle(id, button){
+      const card=document.getElementById(id);
+      const deferredList=document.getElementById('deferredActionList');
+      const placeholder=document.getElementById('deferred-action-placeholder');
+      if(!card || !deferredList || !placeholder) return;
+      const isDeferred=card.dataset.defer==='true';
+      if(isDeferred){
+        card.dataset.defer='false';
+        card.classList.remove('topic-deferred','opacity-70');
+        button.textContent='Defer';
+        document.getElementById('drItemsList')?.appendChild(card);
+      }else{
+        card.dataset.defer='true';
+        card.classList.add('topic-deferred','opacity-70');
+        button.textContent='Undefer';
+        deferredList.appendChild(card);
+      }
+      placeholder.style.display=deferredList.querySelector('.agenda-card')?'none':'block';
+    }
+
+    function handleActionDeferToggle(cardId, buttonElement){
+      event?.stopPropagation();
+      const card = document.getElementById(cardId);
+      const deferredList = document.getElementById('deferredActionList');
+      const followupsList = document.getElementById('followupsList');
+      if(!card || !deferredList || !followupsList) return;
+
+      const isDeferring = buttonElement?.dataset.action === 'defer';
+      const buttons = card.querySelectorAll('.status-btn');
+
+      buttons.forEach(btn => {
+        if(btn !== buttonElement) btn.classList.remove('active');
+      });
+
+      card.classList.remove('status-done','status-todo','status-defer');
+
+      if(isDeferring){
+        if(card.dataset.status && card.dataset.status !== 'defer'){
+          card.dataset.previousStatus = card.dataset.status;
+        } else if(!card.dataset.previousStatus){
+          card.dataset.previousStatus = 'todo';
+        }
+
+        const nestedContainer = card.closest('.nested-action-items');
+        if(nestedContainer){
+          if(!card.dataset.originalParent){
+            card.dataset.originalParent = nestedContainer.closest('.agenda-card')?.id || 'followupsList';
+          }
+          card.dataset.originalList = 'nested';
+        }else{
+          if(!card.dataset.originalParent){
+            card.dataset.originalParent = card.parentElement?.id || 'followupsList';
+          }
+          card.dataset.originalList = 'root';
+        }
+
+        card.dataset.status = 'defer';
+        card.classList.add('status-defer');
+        deferredList.appendChild(card);
+
+        if(buttonElement){
+          buttonElement.dataset.action = 'undefer';
+          buttonElement.textContent = 'Undefer';
+          buttonElement.classList.add('active');
+        }
+      }else{
+        const previousStatus = card.dataset.previousStatus || 'todo';
+        card.dataset.status = previousStatus;
+        card.classList.add(`status-${previousStatus}`);
+
+        let destination;
+        if(card.dataset.originalList === 'nested'){
+          destination = document.getElementById(card.dataset.originalParent)?.querySelector('.nested-action-items');
+        }else{
+          destination = document.getElementById(card.dataset.originalParent || 'followupsList');
+        }
+        if(!destination) destination = followupsList;
+        destination.appendChild(card);
+
+        if(buttonElement){
+          buttonElement.dataset.action = 'defer';
+          buttonElement.textContent = 'Defer';
+          buttonElement.classList.remove('active');
+        }
+
+        const targetButton = Array.from(buttons).find(btn => btn !== buttonElement && btn.getAttribute('onclick')?.includes(`'${previousStatus}'`));
+        if(targetButton){
+          targetButton.classList.add('active');
+        }
+      }
+
+      updateDeferredPlaceholder();
+    }
+
+    function selectActionStatus(cardId, status, buttonElement){
+      event?.stopPropagation();
+      const card = document.getElementById(cardId);
+      if(!card) return;
+
+      const buttons = card.querySelectorAll('.status-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      buttonElement?.classList.add('active');
+
+      card.classList.remove('status-done','status-todo','status-defer');
+      card.dataset.status = status;
+      if(status !== 'none'){
+        card.classList.add(`status-${status}`);
+      }
+
+      const deferButton = Array.from(buttons).find(btn => btn.dataset.action === 'defer' || btn.dataset.action === 'undefer');
+      if(deferButton && status !== 'defer'){
+        deferButton.textContent = 'Defer';
+        deferButton.dataset.action = 'defer';
+        deferButton.classList.remove('active');
+      }
+
+      const deferredList = document.getElementById('deferredActionList');
+      const isCurrentlyDeferred = card.parentElement === deferredList || card.closest('#deferredActionList');
+      if(status !== 'defer' && isCurrentlyDeferred && deferButton){
+        handleActionDeferToggle(cardId, deferButton);
+      }
+
+      updateDeferredPlaceholder();
+    }
+
+    function toggleActionOwner(evt, button){
+      evt?.stopPropagation();
+      const current = button.textContent.includes('You') ? 'You' : 'Alex';
+      const next = current === 'Alex' ? 'You' : 'Alex';
+      button.textContent = `Assignee: ${next}`;
+    }
+
+    function editActionDescription(evt, button){
+      evt?.stopPropagation();
+      const textEl = button.previousElementSibling;
+      if(!textEl) return;
+      const updated = prompt('Update description:', textEl.textContent.trim());
+      if(updated) textEl.textContent = updated.trim();
+    }
+
+    function confirmDiscardActionItem(cardId){
+      itemToDiscard = cardId;
+      document.getElementById('modal-backdrop')?.classList.remove('hidden');
+      document.getElementById('confirmation-modal')?.classList.remove('hidden');
+    }
+
+    function hideConfirmationModal(){
+      document.getElementById('modal-backdrop')?.classList.add('hidden');
+      document.getElementById('confirmation-modal')?.classList.add('hidden');
+      itemToDiscard = null;
+    }
+
+    function discardActionItemConfirmed(){
+      if(itemToDiscard){
+        document.getElementById(itemToDiscard)?.remove();
+        updateDeferredPlaceholder();
+      }
+      hideConfirmationModal();
+    }
+
+    function addNestedActionItem(button, topicId){
+      const container=document.getElementById(topicId)?.querySelector('.nested-action-items');
+      if(!container) return;
+      const id=`nested-${Date.now()}`;
+      const wrapper=document.createElement('div');
+      wrapper.className='action-card status-todo';
+      wrapper.id=id;
+      wrapper.dataset.status='todo';
+      wrapper.dataset.originalParent = container.closest('.agenda-card')?.id || 'followupsList';
+      wrapper.dataset.originalList = 'nested';
+      wrapper.innerHTML=`
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+          <button type="button" class="text-xs font-medium px-2 py-0.5 rounded-full accent-pill self-start sm:self-center mr-2 flex-shrink-0" onclick="toggleActionOwner(event, this)">Assignee: Alex</button>
+          <div class="flex items-center gap-2 flex-1 mb-2 sm:mb-0">
+            <p class="text-sm font-semibold text-slate-900">New follow-up</p>
+            <button type="button" class="text-xs text-[var(--brand-primary)] hover:opacity-80 font-medium" onclick="editActionDescription(event,this)">Edit</button>
+          </div>
+          <div class="flex items-center space-x-2 flex-shrink-0">
+            <button onclick="selectActionStatus('${id}','done', this)" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200">Done</button>
+            <button onclick="selectActionStatus('${id}','todo', this)" class="status-btn active px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-300 hover:bg-amber-200">To-do</button>
+            <button onclick="handleActionDeferToggle('${id}', this)" data-action="defer" class="status-btn px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200">Defer</button>
+            <button class="action-dismiss-button" onclick="confirmDiscardActionItem('${id}')">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+            </button>
+          </div>
+        </div>`;
+      container.appendChild(wrapper);
+    }
+
+    function updateDeferredPlaceholder(){
+      const list=document.getElementById('deferredActionList');
+      const placeholder=document.getElementById('deferred-action-placeholder');
+      if(!list || !placeholder) return;
+      const hasItems=!!list.querySelector('.agenda-card, .action-card[data-status="defer"]');
+      placeholder.style.display=hasItems?'none':'block';
+    }
+
+    function showAddPlaceholder(kind){
+      alert(`Add ${kind} during the conversation to keep both views aligned.`);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('modal-cancel')?.addEventListener('click', hideConfirmationModal);
+      document.getElementById('modal-confirm')?.addEventListener('click', discardActionItemConfirmed);
+      document.getElementById('modal-backdrop')?.addEventListener('click', hideConfirmationModal);
+      updateDeferredPlaceholder();
+    });
+
+    const meetingDuration = 45*60;
+    let elapsedSeconds = 600;
+    const timerElement = document.getElementById('timer-display');
+    const progressElement = document.getElementById('progress-bar');
+    const totalMinutes = Math.floor(meetingDuration/60);
+
+    function updateTimer(){
+      elapsedSeconds = Math.min(elapsedSeconds + 1, meetingDuration);
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
+      const formatted = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      if(timerElement) timerElement.textContent = `${formatted} / ${totalMinutes}:00 Total`;
+      const percentage = (elapsedSeconds / meetingDuration) * 100;
+      if(progressElement) progressElement.style.width = `${percentage}%`;
+    }
+
+    setInterval(updateTimer, 1000);
+    updateTimer();
+  </script>
+</body>
+</html>
